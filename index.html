@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#E8E5DE" />
+<meta name="description" content="เครื่องมือสเก็ต 3 มิติสำหรับงานสถาปัตย์ของ UCD ใช้ได้ทั้งมือถือ iPad และคอมพิวเตอร์" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<title>UCD Sketch3D — สเก็ต 3 มิติ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script src="vendor/three.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<style>
+:root{
+  --paper:#E8E5DE; --trace:#F7F5F0; --white:#fff;
+  --graphite:#191817; --graphite-2:#42403C; --graphite-3:#8A8780;
+  --rule:#CFCBC2; --blue:#1F4FD8; --blue-soft:#DFE5FB; --red:#B93A26;
+  --ax-x:#C8322A; --ax-y:#2255CC; --ax-z:#2E8B45; --ax-m:#A83BB8;
+  --r:10px; --shadow:0 1px 2px rgba(25,24,23,.10),0 8px 24px rgba(25,24,23,.12);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--paper);color:var(--graphite);-webkit-user-select:none;user-select:none}
+canvas{display:block;touch-action:none;position:fixed;inset:0}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+.topbar{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 10px) 12px 0;
+  display:flex;gap:8px;align-items:flex-start;justify-content:space-between;pointer-events:none;z-index:30}
+.brand{pointer-events:auto;background:var(--graphite);color:var(--trace);border-radius:var(--r);
+  padding:8px 11px 7px;display:flex;align-items:baseline;gap:7px;box-shadow:var(--shadow)}
+.brand b{font-family:'IBM Plex Mono';font-weight:600;font-size:13px;letter-spacing:.09em}
+.brand span{font-family:'IBM Plex Mono';font-size:10px;color:#9C9891;letter-spacing:.14em}
+.topright{pointer-events:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:66vw}
+
+.ibtn{background:var(--trace);border:1px solid var(--rule);color:var(--graphite);border-radius:var(--r);
+  padding:8px 10px;font-family:'IBM Plex Sans Thai';font-size:12.5px;font-weight:500;cursor:pointer;
+  box-shadow:var(--shadow);display:inline-flex;align-items:center;gap:6px;line-height:1}
+.ibtn:active{transform:translateY(1px)}
+.ibtn.danger{color:var(--red)}
+.ibtn[aria-pressed="true"]{background:var(--graphite);color:var(--trace);border-color:var(--graphite)}
+.ibtn:disabled{opacity:.35;cursor:default}
+.ibtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+.rail{position:fixed;z-index:30;left:12px;top:calc(env(safe-area-inset-top) + 62px);display:flex;flex-direction:column;
+  background:var(--trace);border:1px solid var(--rule);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;width:128px}
+.phase{display:flex;align-items:center;gap:9px;padding:9px 11px;cursor:pointer;border-bottom:1px solid var(--rule);
+  background:transparent;text-align:left;font-family:'IBM Plex Sans Thai';font-size:13px;color:var(--graphite-2);font-weight:500}
+.phase:last-child{border-bottom:none}
+.phase .n{font-family:'IBM Plex Mono';font-size:10px;color:var(--graphite-3);border:1px solid var(--rule);border-radius:4px;padding:2px 4px;line-height:1}
+.phase[aria-selected="true"]{background:var(--blue-soft);color:var(--blue);font-weight:600}
+.phase[aria-selected="true"] .n{border-color:var(--blue);color:var(--blue)}
+
+.dock{position:fixed;z-index:30;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 12px);
+  width:min(780px,calc(100vw - 24px));background:var(--trace);border:1px solid var(--rule);border-radius:14px;
+  box-shadow:var(--shadow);padding:10px;display:flex;flex-direction:column;gap:9px}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.tool{flex:1 1 auto;min-width:72px;background:var(--white);border:1px solid var(--rule);border-radius:9px;padding:9px 7px 8px;
+  cursor:pointer;text-align:center;font-family:'IBM Plex Sans Thai';font-size:12.5px;font-weight:500;color:var(--graphite-2);
+  display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.15}
+.tool svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tool[aria-pressed="true"]{background:var(--graphite);border-color:var(--graphite);color:var(--trace)}
+.tool:disabled{opacity:.34;cursor:default}
+
+.row{display:flex;align-items:center;gap:10px}
+.row .lab{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.09em;color:var(--graphite-3);white-space:nowrap;min-width:62px}
+.row .val{font-family:'IBM Plex Mono';font-size:11.5px;min-width:56px;text-align:right}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:22px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--rule)}
+input[type=range]::-moz-range-track{height:2px;background:var(--rule)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--trace);border:1.5px solid var(--graphite);margin-top:-8px}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--trace);border:1.5px solid var(--graphite)}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:7px 9px;font-size:12px;
+  font-family:'IBM Plex Sans Thai';cursor:pointer;color:var(--graphite-2);display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{background:var(--graphite);border-color:var(--graphite);color:var(--trace)}
+.chip svg{width:34px;height:10px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.sw{width:38px;height:38px;border-radius:8px;border:1px solid rgba(25,24,23,.22);cursor:pointer;position:relative;padding:0}
+.sw[aria-pressed="true"]{outline:2px solid var(--blue);outline-offset:2px}
+.sw i{position:absolute;left:-4px;right:-4px;bottom:-14px;text-align:center;font-family:'IBM Plex Mono';font-size:8.5px;color:var(--graphite-3);font-style:normal}
+.swatches.labeled{margin-bottom:14px}
+.hint{font-size:11.5px;color:var(--graphite-3);line-height:1.45;border-top:1px dashed var(--rule);padding-top:8px}
+.hint b{color:var(--graphite-2);font-weight:600}
+
+/* floating panels */
+.panel{position:fixed;z-index:35;right:12px;top:calc(env(safe-area-inset-top) + 62px);width:246px;
+  background:var(--trace);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--shadow);
+  padding:12px;display:none;max-height:calc(100vh - 200px);overflow:auto}
+.panel.on{display:block}
+.panel h3{margin:0 0 2px;font-size:12px;font-weight:600;letter-spacing:.02em}
+.panel .note{margin:0 0 10px;font-size:10.5px;color:var(--graphite-3);font-family:'IBM Plex Mono'}
+.grp{border-top:1px dashed var(--rule);margin-top:11px;padding-top:10px}
+.grp:first-of-type{border-top:none;margin-top:0;padding-top:0}
+.grp .t{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.12em;color:var(--graphite-3);margin-bottom:7px}
+.tog{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:6px 4px;cursor:pointer;
+  font-family:'IBM Plex Sans Thai';font-size:12.5px;color:var(--graphite-2);text-align:left;border-radius:6px}
+.tog:hover{background:rgba(25,24,23,.04)}
+.tog .box{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--rule);background:var(--white);flex:none;position:relative}
+.tog[aria-pressed="true"] .box{background:var(--graphite);border-color:var(--graphite)}
+.tog[aria-pressed="true"] .box::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid var(--trace);border-width:0 1.6px 1.6px 0;transform:rotate(42deg)}
+.tog .dot{width:9px;height:9px;border-radius:2px;flex:none}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;background:var(--white);border:1px solid var(--rule);border-radius:7px;padding:8px 4px;font-size:11.5px;
+  font-family:'IBM Plex Sans Thai';cursor:pointer;color:var(--graphite-2)}
+.seg button[aria-pressed="true"]{background:var(--graphite);border-color:var(--graphite);color:var(--trace)}
+
+.lrow{display:flex;align-items:center;gap:6px;padding:4px 2px;border-radius:6px}
+.lrow[data-active="1"]{background:var(--blue-soft)}
+.lrow .eye{border:none;background:none;cursor:pointer;padding:3px;color:var(--graphite-2);display:flex}
+.lrow .eye svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.lrow .eye[aria-pressed="false"]{color:var(--rule)}
+.lrow .nm{flex:1;font-size:12.5px;background:none;border:none;font-family:'IBM Plex Sans Thai';color:var(--graphite);
+  padding:4px 2px;border-radius:4px;min-width:0;cursor:pointer}
+.lrow .nm:focus{background:var(--white);outline:1px solid var(--blue)}
+.lrow .cnt{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--graphite-3)}
+.lrow .del{border:none;background:none;color:var(--red);cursor:pointer;font-size:15px;line-height:1;padding:2px 5px}
+
+/* HUD */
+.hud{position:fixed;z-index:25;pointer-events:none;background:var(--graphite);color:var(--trace);
+  font-family:'IBM Plex Mono';font-size:11px;padding:5px 8px;border-radius:7px;display:none;white-space:nowrap;letter-spacing:.02em}
+.hud.on{display:block}
+.hud em{font-style:normal;font-weight:600;margin-left:7px}
+
+.readout{position:fixed;z-index:24;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);
+  font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.05em;color:var(--graphite-3);text-align:right;line-height:1.75;pointer-events:none}
+.scalebar{display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-top:5px}
+.scalebar .bar{height:6px;border:1px solid var(--graphite-3);border-top:none;width:70px}
+
+.scrim{position:fixed;inset:0;background:rgba(25,24,23,.44);z-index:60;display:none;align-items:center;justify-content:center;padding:18px}
+.scrim.on{display:flex}
+.num{width:74px;background:var(--white);border:1px solid var(--rule);border-radius:7px;padding:8px;
+  font-family:'IBM Plex Mono';font-size:12.5px;color:var(--graphite);text-align:right}
+.num:focus{outline:1px solid var(--blue);border-color:var(--blue)}
+.num.armed{border-color:var(--blue);background:var(--blue-soft)}
+.unit{font-family:'IBM Plex Mono';font-size:10px;color:var(--graphite-3);letter-spacing:.06em}
+.vcb{display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:var(--white);border:1px solid var(--rule);
+  border-radius:9px;padding:8px}
+.vcb .cap{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.11em;color:var(--graphite-3)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--graphite-3);font-family:'IBM Plex Mono'}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.rref{border-top:1px dashed var(--rule);padding-top:9px;margin-top:9px}
+.rref .hd{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.rref .hd b{flex:1;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini{display:flex;gap:5px;align-items:center;margin-bottom:6px}
+.mini .num{width:64px;padding:6px}
+.mini label{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--graphite-3);width:14px}
+.card{background:var(--trace);border-radius:14px;max-width:470px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:84vh;overflow:auto}
+.card h2{margin:0 0 4px;font-size:17px;font-weight:600}
+.card p.sub{margin:0 0 16px;font-size:12.5px;color:var(--graphite-3)}
+.card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:baseline}
+.card dt{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--blue);white-space:nowrap}
+.card dd{margin:0;font-size:12.5px;color:var(--graphite-2);line-height:1.45}
+.card .close{margin-top:18px;width:100%;background:var(--graphite);color:var(--trace);border:none;border-radius:9px;
+  padding:11px;font-family:'IBM Plex Sans Thai';font-size:14px;font-weight:500;cursor:pointer}
+.k{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+
+.toast{position:fixed;z-index:70;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 62px);
+  background:var(--graphite);color:var(--trace);padding:9px 14px;border-radius:8px;font-size:12.5px;opacity:0;
+  transition:opacity .18s;pointer-events:none;box-shadow:var(--shadow)}
+.toast.on{opacity:1}
+
+@media (max-width:680px){
+  .rail{left:12px;right:12px;top:auto;bottom:calc(env(safe-area-inset-bottom) + 218px);width:auto;flex-direction:row}
+  .phase{flex:1;border-bottom:none;border-right:1px solid var(--rule);justify-content:center;padding:8px 4px;font-size:12px;gap:5px}
+  .phase:last-child{border-right:none}
+  .readout{display:none}
+  .panel{left:12px;right:12px;width:auto;top:calc(env(safe-area-inset-top) + 108px);max-height:52vh}
+  .tool{min-width:0;font-size:11.5px;padding:8px 4px 7px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><b>UCD</b><span>SKETCH3D</span></div>
+  <div class="topright">
+    <button class="ibtn" id="btnUndo" title="ย้อน (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12H9"/></svg>ย้อน</button>
+    <button class="ibtn" id="btnRedo" title="ทำซ้ำ (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h5"/></svg>ทำซ้ำ</button>
+    <button class="ibtn danger" id="btnDelete"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13"/></svg>ลบ</button>
+    <button class="ibtn" id="btnView"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>มุมมอง</button>
+    <button class="ibtn" id="btnLayers"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>เลเยอร์</button>
+    <button class="ibtn" id="btnFocus"><svg viewBox="0 0 24 24"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg>จัดมุม</button>
+    <button class="ibtn" id="btnRefs"><svg viewBox="0 0 24 24"><path d="M3 5h18v14H3z"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg>อ้างอิง</button>
+    <button class="ibtn" id="btnFile"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M9 4v5h6"/></svg>ไฟล์</button>
+    <button class="ibtn" id="btnHelp">?</button>
+    <input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+    <input type="file" id="imgIn" accept="image/*,.pdf,application/pdf" style="display:none">
+  </div>
+</div>
+
+<div class="rail" role="tablist">
+  <button class="phase" role="tab" data-phase="0" aria-selected="true"><span class="n">01</span>ร่าง</button>
+  <button class="phase" role="tab" data-phase="1" aria-selected="false"><span class="n">02</span>ผิว</button>
+  <button class="phase" role="tab" data-phase="2" aria-selected="false"><span class="n">03</span>วัสดุ</button>
+  <button class="phase" role="tab" data-phase="3" aria-selected="false"><span class="n">04</span>แสง</button>
+</div>
+
+<div class="panel" id="panelView"></div>
+<div class="panel" id="panelLayers"></div>
+<div class="panel" id="panelFile"></div>
+<div class="panel" id="panelRefs"></div>
+
+<div class="scrim" id="setupScrim">
+  <div class="card">
+    <h2>ตั้งค่าพื้นที่ทำงาน</h2>
+    <p class="sub">กำหนดหน่วยและกริดก่อนเริ่มงาน — เปลี่ยนทีหลังได้ในเมนูมุมมอง</p>
+    <div class="grp"><div class="t">หน่วยที่ใช้</div>
+      <div class="seg" id="setUnit">
+        <button data-u="mm" aria-pressed="false">มิลลิเมตร</button>
+        <button data-u="cm" aria-pressed="false">เซนติเมตร</button>
+        <button data-u="m" aria-pressed="true">เมตร</button>
+      </div></div>
+    <div class="grp"><div class="t">ระยะกริด</div>
+      <div class="seg" id="setGrid">
+        <button data-g="0.01" aria-pressed="false">10 มม.</button>
+        <button data-g="0.1" aria-pressed="false">100 มม.</button>
+        <button data-g="1" aria-pressed="true">1 ม.</button>
+        <button data-g="free" aria-pressed="false">อิสระ</button>
+      </div>
+      <div class="mini" id="setFreeWrap" style="margin-top:9px;display:none">
+        <label>=</label><input class="num" id="setFree" value="250"><span class="unit" id="setFreeU">มม.</span>
+      </div></div>
+    <div class="grp"><div class="t">ขนาดกล่องทำงาน</div>
+      <div class="mini"><label>กว้าง</label><input class="num" id="setW" value="40"><span class="unit">ม.</span>
+      <label style="width:auto;margin-left:8px">สูง</label><input class="num" id="setH" value="20"><span class="unit">ม.</span></div>
+    </div>
+    <button class="close" id="setupGo">เริ่มงาน</button>
+  </div>
+</div>
+
+<div class="dock" id="dock"></div>
+<div class="hud mono" id="hud"></div>
+<div class="readout" id="readout"></div>
+
+<div class="scrim" id="scrim">
+  <div class="card">
+    <h2>วิธีใช้</h2>
+    <p class="sub">สเก็ต 3 มิติแบบอิสระ พร้อมไกด์แนวแกนและระบบเกาะจุดแบบงานสถาปัตย์</p>
+    <dl>
+      <dt>Apple Pencil</dt><dd>วาดได้ทันที ไม่ต้องสลับโหมด — นิ้วสงวนไว้หมุน/ซูม</dd>
+      <dt>2 นิ้ว</dt><dd>ลากหมุนรอบชิ้นงาน · หุบ-กางเพื่อซูม</dd>
+      <dt>3 นิ้ว</dt><dd>ลากเลื่อนมุมมอง</dd>
+      <dt>เมาส์</dt><dd>ซ้ายใช้เครื่องมือ · ขวาหมุน · กลาง/Shift+ซ้ายเลื่อน · ล้อซูม</dd>
+      <dt>แนวแกน</dt><dd><span class="k" style="background:#C8322A"></span>แดง = กว้าง (X) &nbsp; <span class="k" style="background:#2E8B45"></span>เขียว = ลึก (Z) &nbsp; <span class="k" style="background:#2255CC"></span>น้ำเงิน = สูง (Y) &nbsp; <span class="k" style="background:#A83BB8"></span>ม่วง = ต่อแนว/ตั้งฉากกับเส้นเดิม</dd>
+      <dt>ฟรีแฮนด์</dt><dd>ลากวาดอิสระ — <b>ค้างนิ่งไว้</b> ช่วงที่วาดจะถูกดัดเป็นเส้นตรงทันที แล้ววาดต่อได้เลย</dd>
+      <dt>เส้นตรง</dt><dd>แตะวางจุดที่ 1 (ไม่ต้องค้าง) → ถ้าต้องการระยะแน่นอนให้ใส่ใน <b>ล็อกระยะ</b> → กดค้างที่จุดที่ 2 จะเห็นสีบอกทิศ ลากจนได้แนวที่ต้องการ แล้ว<b>ปล่อยมือ</b> เส้นจึงเกิด</dd>
+      <dt>ล็อกระยะ</dt><dd>ว่างไว้ = เส้นไปหยุดตรงที่ปล่อยมือ · ใส่ค่า = เส้นยาวเท่าที่กำหนดตามทิศที่ลาก (จะสั้นหรือเลยจุดที่ 2 ก็ได้)</dd>
+      <dt>ภาพอ้างอิง</dt><dd>นำเข้ารูปหรือ PDF เป็นแปลน/รูปด้าน วางบนระนาบพื้นหรือระนาบตั้ง ตั้งจุดเริ่มและคาลิเบรตสเกลได้</dd>
+      <dt>ปิดวง = ผิว</dt><dd>เมื่อเส้นบรรจบกันครบวง ระบบสร้างเพลนให้อัตโนมัติ</dd>
+      <dt>โหนด</dt><dd>ลากจุดเพื่อดัดรูปทรง เส้นและผิวที่ต่ออยู่จะขยับตาม</dd>
+      <dt>กล่องไกด์</dt><dd>เปิด/ปิดกริดพื้น ผนังหน้า ผนังข้าง ได้แยกกันในเมนู <b>มุมมอง</b></dd>
+    </dl>
+    <button class="close" id="btnCloseHelp">เริ่มสเก็ต</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   UCD Sketch3D — node / edge / face sketch engine
+   ========================================================================= */
+if(typeof THREE === 'undefined'){
+  document.body.innerHTML='<div style="padding:40px;font-family:sans-serif">โหลดไลบรารี 3 มิติไม่สำเร็จ — ต่ออินเทอร์เน็ตแล้วรีเฟรช</div>';
+  throw new Error('no three');
+}
+const V3 = (x,y,z)=>new THREE.Vector3(x,y,z);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ---------- renderer / scene ---------- */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+document.body.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xE8E5DE);
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.05,4000);
+
+const hemi=new THREE.HemisphereLight(0xffffff,0xBFBBB2,0.5); scene.add(hemi);
+const amb=new THREE.AmbientLight(0xffffff,0.28); scene.add(amb);
+const sun=new THREE.DirectionalLight(0xfff4e2,1.3);
+sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=1; sun.shadow.camera.far=300;
+sun.shadow.camera.left=-60; sun.shadow.camera.right=60;
+sun.shadow.camera.top=60; sun.shadow.camera.bottom=-60; sun.shadow.bias=-0.0006;
+scene.add(sun); scene.add(sun.target);
+
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(600,600),new THREE.ShadowMaterial({opacity:0.2}));
+ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+
+/* ---------- guide box: 3 grids + axes ---------- */
+const guides=new THREE.Group(); scene.add(guides);
+const gridG={xz:null,xy:null,yz:null}, axesG=new THREE.Group(); guides.add(axesG);
+
+function gridPlane(w,h,step,uDir,vDir,origin,minor,major,majorEvery){
+  const pos=[],col=[];
+  const cm=new THREE.Color(minor), cM=new THREE.Color(major);
+  const MAXN=260;                                  // keep fine grids from exploding
+  if(w/step>MAXN) w=step*MAXN;
+  if(h/step>MAXN) h=step*MAXN;
+  const nu=Math.round(w/step), nv=Math.round(h/step);
+  for(let i=0;i<=nu;i++){
+    const t=-w/2+i*step, isM=(Math.round(t/step)%majorEvery===0);
+    const a=origin.clone().addScaledVector(uDir,t).addScaledVector(vDir,-h/2);
+    const b=origin.clone().addScaledVector(uDir,t).addScaledVector(vDir, h/2);
+    pos.push(a.x,a.y,a.z,b.x,b.y,b.z);
+    const c=isM?cM:cm; col.push(c.r,c.g,c.b,c.r,c.g,c.b);
+  }
+  for(let i=0;i<=nv;i++){
+    const t=-h/2+i*step, isM=(Math.round(t/step)%majorEvery===0);
+    const a=origin.clone().addScaledVector(vDir,t).addScaledVector(uDir,-w/2);
+    const b=origin.clone().addScaledVector(vDir,t).addScaledVector(uDir, w/2);
+    pos.push(a.x,a.y,a.z,b.x,b.y,b.z);
+    const c=isM?cM:cm; col.push(c.r,c.g,c.b,c.r,c.g,c.b);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  return new THREE.LineSegments(g,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.75}));
+}
+function axisLine(dir,len,color){
+  const g=new THREE.BufferGeometry();
+  const pos=[],col=[]; const c=new THREE.Color(color);
+  const steps=40;
+  for(let i=0;i<steps;i++){                        // solid positive, dashed negative
+    const t0=i/steps, t1=(i+0.62)/steps;
+    pos.push(dir.x*len*t0,dir.y*len*t0,dir.z*len*t0, dir.x*len*t1,dir.y*len*t1,dir.z*len*t1);
+    col.push(c.r,c.g,c.b,c.r,c.g,c.b);
+    if(i%2===0){
+      const s0=-t0, s1=-(i+0.34)/steps;
+      pos.push(dir.x*len*s0,dir.y*len*s0,dir.z*len*s0, dir.x*len*s1,dir.y*len*s1,dir.z*len*s1);
+      col.push(c.r,c.g,c.b,c.r,c.g,c.b);
+    }
+  }
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  return new THREE.LineSegments(g,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.85}));
+}
+function buildGuides(){
+  ['xz','xy','yz'].forEach(k=>{ if(gridG[k]){ guides.remove(gridG[k]); gridG[k].geometry.dispose(); gridG[k]=null; } });
+  const w=S.boxW, h=S.boxH, st=S.gridStep, me=S.gridMajor;
+  gridG.xz=gridPlane(w,w,st,V3(1,0,0),V3(0,0,1),V3(0,0,0),0xD6D2C9,0xB6B2A8,me);
+  gridG.xy=gridPlane(w,h,st,V3(1,0,0),V3(0,1,0),V3(0,h/2,-w/2),0xDAD6CD,0xBEBAB0,me);
+  gridG.yz=gridPlane(w,h,st,V3(0,0,1),V3(0,1,0),V3(-w/2,h/2,0),0xDAD6CD,0xBEBAB0,me);
+  guides.add(gridG.xz,gridG.xy,gridG.yz);
+
+  while(axesG.children.length){ const c=axesG.children.pop(); c.geometry.dispose(); }
+  axesG.add(axisLine(V3(1,0,0),w/2,0xC8322A));
+  axesG.add(axisLine(V3(0,0,1),w/2,0x2E8B45));
+  axesG.add(axisLine(V3(0,1,0),h,0x2255CC));
+  syncGuideVis();
+}
+function syncGuideVis(){
+  if(gridG.xz) gridG.xz.visible=S.gXZ;
+  if(gridG.xy) gridG.xy.visible=S.gXY;
+  if(gridG.yz) gridG.yz.visible=S.gYZ;
+  axesG.visible=S.gAxes;
+  gridDots.visible=S.gridDots;
+  ground.visible=S.shadows&&S.lights;
+}
+
+/* ---------- reference images / pdf ---------- */
+const gRefs=new THREE.Group(); scene.add(gRefs);
+
+/* ---------- grid intersection dots (snap targets) ---------- */
+const gridDots=new THREE.Points(new THREE.BufferGeometry(),
+  new THREE.PointsMaterial({color:0x9A968E,size:3.4,sizeAttenuation:false,transparent:true,opacity:.75}));
+gridDots.frustumCulled=false; gridDots.visible=false; scene.add(gridDots);
+let dotsKey='';
+function buildGridDots(force){
+  if(!S.gridDots){ dotsKey=''; return; }
+  const st=S.gridStep;
+  const cx=Math.round(cam.target.x/st)*st, cz=Math.round(cam.target.z/st)*st;
+  const n=Math.min(50,Math.max(6,Math.round(cam.radius/st/1.6)));
+  const key=[st,cx,cz,n,S.planeH].join('|');
+  if(key===dotsKey&&!force) return;
+  dotsKey=key;
+  const pos=[];
+  for(let i=-n;i<=n;i++) for(let j=-n;j<=n;j++) pos.push(cx+i*st,S.planeH,cz+j*st);
+  gridDots.geometry.dispose();
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  gridDots.geometry=g;
+}
+/* nearest grid intersection to a world point (on the drawing plane) */
+function nearestGridPoint(p){
+  const st=S.gridStep;
+  return V3(Math.round(p.x/st)*st,S.planeH,Math.round(p.z/st)*st);
+}
+
+/* ---------- work groups ---------- */
+const gEdges=new THREE.Group(), gFaces=new THREE.Group(), gHelp=new THREE.Group();
+scene.add(gFaces,gEdges,gHelp);
+
+/* node dots */
+function dotTexture(){
+  const c=document.createElement('canvas'); c.width=c.height=64;
+  const x=c.getContext('2d');
+  x.beginPath(); x.arc(32,32,26,0,7); x.fillStyle='#fff'; x.fill();
+  x.lineWidth=8; x.strokeStyle='rgba(0,0,0,.55)'; x.stroke();
+  const t=new THREE.CanvasTexture(c); return t;
+}
+const DOT=dotTexture();
+function mkPoints(size){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute([],3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute([],3));
+  const m=new THREE.PointsMaterial({size,sizeAttenuation:false,vertexColors:true,map:DOT,
+    transparent:true,alphaTest:0.35,depthTest:false});
+  const p=new THREE.Points(g,m); p.frustumCulled=false; p.renderOrder=9; return p;
+}
+const ptsMain=mkPoints(11), ptsSoft=mkPoints(6);
+gHelp.add(ptsMain,ptsSoft);
+
+/* ---------- model ---------- */
+const M={nodes:{},edges:{},faces:{},layers:[],active:'L1',seq:1};
+const nid=()=>'n'+(M.seq++), eid=()=>'e'+(M.seq++), fid=()=>'f'+(M.seq++);
+
+function resetModel(){
+  M.nodes={};M.edges={};M.faces={};M.seq=1;
+  M.layers=[{id:'L1',name:'ร่าง',visible:true},{id:'L2',name:'ผนัง',visible:true},{id:'L3',name:'ไกด์',visible:true}];
+  M.active='L1';
+}
+resetModel();
+const layerOf=id=>M.layers.find(l=>l.id===id)||M.layers[0];
+
+function addNode(p,lock,soft){
+  const id=nid();
+  M.nodes[id]={id,p:[p.x,p.y,p.z],lock:lock||null,soft:!!soft};
+  return id;
+}
+function nodePos(id){const n=M.nodes[id];return V3(n.p[0],n.p[1],n.p[2]);}
+function addEdge(a,b){
+  if(a===b) return null;
+  for(const k in M.edges){const e=M.edges[k]; if((e.a===a&&e.b===b)||(e.a===b&&e.b===a)) return e.id;}
+  const id=eid();
+  M.edges[id]={id,a,b,w:S.weight,style:S.lineStyle,ink:S.ink,layer:M.active,rev:0};
+  return id;
+}
+function addFace(loop,matKey){
+  const key=loop.slice().sort().join(',');
+  for(const k in M.faces){ if(M.faces[k].loop.slice().sort().join(',')===key) return null; }
+  const id=fid();
+  M.faces[id]={id,loop:loop.slice(),matKey:matKey||S.mat,layer:M.active,rev:0};
+  return id;
+}
+function edgesAt(nodeId){const r=[];for(const k in M.edges){const e=M.edges[k];if(e.a===nodeId||e.b===nodeId)r.push(e);}return r;}
+function pruneNode(id){
+  if(edgesAt(id).length) return;
+  for(const k in M.faces) if(M.faces[k].loop.includes(id)) return;
+  delete M.nodes[id];
+}
+function deleteEdge(id){
+  const e=M.edges[id]; if(!e) return;
+  for(const k in M.faces){
+    const f=M.faces[k], L=f.loop;
+    let uses=false;
+    for(let i=0;i<L.length;i++){const a=L[i],b=L[(i+1)%L.length];
+      if((a===e.a&&b===e.b)||(a===e.b&&b===e.a)){uses=true;break;}}
+    if(uses) deleteFace(k);
+  }
+  delete M.edges[id];
+  pruneNode(e.a); pruneNode(e.b);
+}
+function deleteFace(id){ if(M.faces[id]) delete M.faces[id]; }
+
+/* ---------- undo (snapshots) ---------- */
+let UNDO=[],REDO=[];
+const snap=()=>JSON.stringify({nodes:M.nodes,edges:M.edges,faces:M.faces,layers:M.layers,active:M.active,seq:M.seq});
+function restore(s){
+  const d=JSON.parse(s);
+  M.nodes=d.nodes;M.edges=d.edges;M.faces=d.faces;M.layers=d.layers;M.active=d.active;M.seq=d.seq;
+  sel={kind:null,id:null}; chain=null;
+  rebuildAll(); renderPanels(); renderDock(); updateReadout();
+}
+function commit(){ UNDO.push(snap()); if(UNDO.length>60)UNDO.shift(); REDO.length=0; }
+function undo(){ if(!UNDO.length){toast('ไม่มีอะไรให้ย้อนแล้ว');return;} REDO.push(snap()); restore(UNDO.pop()); }
+function redo(){ if(!REDO.length){toast('ไม่มีอะไรให้ทำซ้ำ');return;} UNDO.push(snap()); restore(REDO.pop()); }
+
+/* ---------- settings ---------- */
+const MATS=[
+  {key:'plaster',name:'ผนังขาว',color:0xF2F0EB,rough:.94,metal:0,op:1},
+  {key:'concrete',name:'ปูนเปลือย',color:0xB6B3AC,rough:.90,metal:0,op:1},
+  {key:'wood',name:'ไม้',color:0xB07B45,rough:.68,metal:0,op:1},
+  {key:'brick',name:'อิฐ',color:0x9C5A44,rough:.85,metal:0,op:1},
+  {key:'steel',name:'เหล็ก',color:0x6E7378,rough:.34,metal:.85,op:1},
+  {key:'glass',name:'กระจก',color:0x9FC3D6,rough:.06,metal:.1,op:.32},
+  {key:'green',name:'พื้นเขียว',color:0x7C9061,rough:.95,metal:0,op:1},
+  {key:'dark',name:'ดำ',color:0x2A2926,rough:.7,metal:.05,op:1},
+];
+const INKS=[{key:'graphite',name:'ดินสอ',color:0x191817},{key:'blue',name:'น้ำเงิน',color:0x1F4FD8},
+            {key:'red',name:'แดง',color:0xB93A26},{key:'grey',name:'ไกด์',color:0x9A968E}];
+const STYLES=[{key:'solid',name:'ทึบ'},{key:'dash',name:'ประ'},{key:'dot',name:'จุด'},{key:'dashdot',name:'ขีด-จุด'}];
+
+const S={
+  phase:0, tool:'free',
+  unit:'m', gridDots:false, keyLen:null, refs:[], setOriginFor:null,
+  planeH:0, weight:0.035, lineStyle:'solid', ink:'graphite', mat:'plaster',
+  snapFace:false, extrude:3.0, massH:3.0,
+  display:'solid',            // wire | solid | xray
+  lights:true, materials:true, shadows:true,
+  gXZ:true,gXY:false,gYZ:false,gAxes:true, snapGrid:true,
+  boxW:40, boxH:20, gridStep:1, gridMajor:5,
+  sunAz:135,sunAlt:48,sunInt:1.3,
+};
+let sel={kind:null,id:null};
+
+/* ---------- units (world is metres) ---------- */
+const UNITS={mm:{f:1000,n:'มม.',dec:0},cm:{f:100,n:'ซม.',dec:1},m:{f:1,n:'ม.',dec:2}};
+const uInfo=()=>UNITS[S.unit]||UNITS.m;
+const toU=m=>m*uInfo().f;                          // metres → display units
+const toM=v=>v/uInfo().f;                          // display units → metres
+function fmtU(m,withUnit){
+  const u=uInfo();
+  return toU(m).toFixed(u.dec)+(withUnit===false?'':' '+u.n);
+}
+
+/* ---------- camera ---------- */
+const cam={target:V3(0,1.5,0),theta:Math.PI*.28,phi:Math.PI*.34,radius:34};
+function applyCamera(){
+  cam.phi=clamp(cam.phi,.04,Math.PI-.04); cam.radius=clamp(cam.radius,.6,600);
+  const s=Math.sin(cam.phi);
+  camera.position.set(cam.target.x+cam.radius*s*Math.sin(cam.theta),
+                      cam.target.y+cam.radius*Math.cos(cam.phi),
+                      cam.target.z+cam.radius*s*Math.cos(cam.theta));
+  camera.lookAt(cam.target);
+}
+applyCamera();
+function toScreen(v){
+  const p=v.clone().project(camera);
+  return {x:(p.x*.5+.5)*innerWidth, y:(-p.y*.5+.5)*innerHeight, z:p.z};
+}
+
+/* =========================================================================
+   geometry
+   ========================================================================= */
+function mergeGeos(list){
+  let vc=0,ic=0;
+  list.forEach(g=>{vc+=g.attributes.position.count; ic+=g.index?g.index.count:0;});
+  const pos=new Float32Array(vc*3),nor=new Float32Array(vc*3),idx=new Uint32Array(ic);
+  let vo=0,io=0;
+  list.forEach(g=>{
+    pos.set(g.attributes.position.array,vo*3);
+    if(g.attributes.normal) nor.set(g.attributes.normal.array,vo*3);
+    if(g.index){ const a=g.index.array; for(let i=0;i<a.length;i++) idx[io+i]=a[i]+vo; io+=a.length; }
+    vo+=g.attributes.position.count; g.dispose();
+  });
+  const out=new THREE.BufferGeometry();
+  out.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  out.setAttribute('normal',new THREE.BufferAttribute(nor,3));
+  out.setIndex(new THREE.BufferAttribute(idx,1));
+  return out;
+}
+const _up=V3(0,1,0);
+function cylinder(a,b,r){
+  const d=new THREE.Vector3().subVectors(b,a), L=d.length();
+  if(L<1e-6) return null;
+  const g=new THREE.CylinderGeometry(r,r,L,6,1,false);
+  const q=new THREE.Quaternion().setFromUnitVectors(_up,d.clone().normalize());
+  const m=new THREE.Matrix4().compose(new THREE.Vector3().addVectors(a,b).multiplyScalar(.5),q,V3(1,1,1));
+  g.applyMatrix4(m); return g;
+}
+function dashSpans(L,style,r){
+  if(style==='solid') return [[0,1]];
+  const u=Math.max(r*9,0.16);
+  let pat;
+  if(style==='dash') pat=[u*2.4,u*1.5];
+  else if(style==='dot') pat=[u*.55,u*1.1];
+  else pat=[u*2.4,u*1.1,u*.55,u*1.1];
+  const spans=[]; let t=0,i=0;
+  while(t<L&&spans.length<260){
+    const on=pat[i%pat.length]; const off=pat[(i+1)%pat.length];
+    spans.push([t/L,Math.min(1,(t+on)/L)]); t+=on+off; i+=2;
+  }
+  return spans;
+}
+function edgeGeometry(a,b,r,style){
+  const spans=dashSpans(a.distanceTo(b),style,r), gs=[];
+  spans.forEach(([t0,t1])=>{
+    const p0=a.clone().lerp(b,t0), p1=a.clone().lerp(b,t1);
+    const g=cylinder(p0,p1,r); if(g) gs.push(g);
+  });
+  if(!gs.length) return null;
+  return gs.length===1?gs[0]:mergeGeos(gs);
+}
+function newellNormal(pts){
+  const n=V3(0,0,0);
+  for(let i=0;i<pts.length;i++){
+    const c=pts[i],d=pts[(i+1)%pts.length];
+    n.x+=(c.y-d.y)*(c.z+d.z); n.y+=(c.z-d.z)*(c.x+d.x); n.z+=(c.x-d.x)*(c.y+d.y);
+  }
+  if(n.lengthSq()<1e-12) return V3(0,1,0);
+  return n.normalize();
+}
+function basisOf(n){
+  const h=Math.abs(n.y)>.92?V3(0,0,1):V3(0,1,0);
+  const u=new THREE.Vector3().crossVectors(h,n).normalize();
+  const v=new THREE.Vector3().crossVectors(n,u).normalize();
+  return {u,v};
+}
+function faceGeometry(pts){
+  if(pts.length<3) return null;
+  const n=newellNormal(pts), {u,v}=basisOf(n), o=pts[0];
+  const c2=pts.map(p=>{const d=p.clone().sub(o);return new THREE.Vector2(d.dot(u),d.dot(v));});
+  let tris;
+  try{ tris=THREE.ShapeUtils.triangulateShape(c2,[]); }catch(e){ tris=null; }
+  if(!tris||!tris.length){ // fan fallback
+    tris=[]; for(let i=1;i<pts.length-1;i++) tris.push([0,i,i+1]);
+  }
+  const pos=new Float32Array(pts.length*3);
+  pts.forEach((p,i)=>{pos[i*3]=p.x;pos[i*3+1]=p.y;pos[i*3+2]=p.z;});
+  const idx=[]; tris.forEach(t=>idx.push(t[0],t[1],t[2]));
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+function polyArea(pts){
+  const n=newellNormal(pts),{u,v}=basisOf(n),o=pts[0]; let A=0;
+  const q=pts.map(p=>{const d=p.clone().sub(o);return [d.dot(u),d.dot(v)];});
+  for(let i=0;i<q.length;i++){const a=q[i],b=q[(i+1)%q.length];A+=a[0]*b[1]-b[0]*a[1];}
+  return Math.abs(A)/2;
+}
+
+/* ---------- materials ---------- */
+const matCache={};
+function faceMaterial(key){
+  const showMat=S.materials, mode=S.display;
+  const ck=key+'|'+showMat+'|'+mode+'|'+S.lights;
+  if(matCache[ck]) return matCache[ck];
+  const m=MATS.find(x=>x.key===key)||MATS[0];
+  const color=showMat?m.color:0xEDEBE6;
+  let op=showMat?m.op:1;
+  if(mode==='xray') op=Math.min(op,0.26);
+  const mat=new THREE.MeshStandardMaterial({
+    color,roughness:showMat?m.rough:.92,metalness:showMat?m.metal:0,
+    side:THREE.DoubleSide,transparent:op<1,opacity:op,depthWrite:op>=1
+  });
+  matCache[ck]=mat; return mat;
+}
+function edgeMaterial(ink){
+  const ck='e'+ink;
+  if(matCache[ck]) return matCache[ck];
+  const c=(INKS.find(i=>i.key===ink)||INKS[0]).color;
+  matCache[ck]=new THREE.MeshStandardMaterial({color:c,roughness:.85,metalness:0});
+  return matCache[ck];
+}
+function clearMatCache(){ for(const k in matCache){ matCache[k].dispose(); delete matCache[k]; } }
+
+/* =========================================================================
+   scene sync
+   ========================================================================= */
+const eMesh={},fMesh={};
+function rebuildEdge(id){
+  const e=M.edges[id]; if(!e) return;
+  if(eMesh[id]){ gEdges.remove(eMesh[id]); eMesh[id].geometry.dispose(); delete eMesh[id]; }
+  const g=edgeGeometry(nodePos(e.a),nodePos(e.b),e.w,e.style);
+  if(!g) return;
+  const m=new THREE.Mesh(g,edgeMaterial(e.ink));
+  m.castShadow=S.lights; m.userData={kind:'edge',id};
+  m.visible=layerOf(e.layer).visible;
+  gEdges.add(m); eMesh[id]=m;
+}
+function rebuildFace(id){
+  const f=M.faces[id]; if(!f) return;
+  if(fMesh[id]){ gFaces.remove(fMesh[id]); fMesh[id].geometry.dispose(); delete fMesh[id]; }
+  const pts=f.loop.map(nodePos);
+  const g=faceGeometry(pts); if(!g) return;
+  const m=new THREE.Mesh(g,faceMaterial(f.matKey));
+  m.castShadow=S.lights; m.receiveShadow=S.lights;
+  m.userData={kind:'face',id};
+  m.visible=layerOf(f.layer).visible&&S.display!=='wire';
+  gFaces.add(m); fMesh[id]=m;
+}
+function rebuildNodes(){
+  const mainP=[],mainC=[],softP=[],softC=[];
+  const COL={x:[0.78,0.20,0.16],z:[0.18,0.55,0.27],y:[0.13,0.33,0.80],ext:[0.66,0.23,0.72],
+             perp:[0.66,0.23,0.72],node:[0.10,0.09,0.09],null:[0.10,0.09,0.09]};
+  const showSoft=(S.tool==='node');
+  for(const k in M.nodes){
+    const n=M.nodes[k], c=COL[n.lock||'null']||COL.null;
+    const s=(sel.kind==='node'&&sel.id===k);
+    const cc=s?[0.12,0.31,0.85]:c;
+    if(n.soft&&!showSoft) continue;
+    if(n.soft){ softP.push(n.p[0],n.p[1],n.p[2]); softC.push(.62,.60,.57); }
+    else{ mainP.push(n.p[0],n.p[1],n.p[2]); mainC.push(cc[0],cc[1],cc[2]); }
+  }
+  const set=(p,pos,col)=>{
+    p.geometry.dispose();
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+    p.geometry=g; p.visible=S.phase<2||S.tool==='node';
+  };
+  set(ptsMain,mainP,mainC); set(ptsSoft,softP,softC);
+  ptsMain.userData.ids=Object.keys(M.nodes).filter(k=>!M.nodes[k].soft);
+  ptsSoft.userData.ids=Object.keys(M.nodes).filter(k=>M.nodes[k].soft);
+}
+function rebuildAll(){
+  for(const id in eMesh){ gEdges.remove(eMesh[id]); eMesh[id].geometry.dispose(); delete eMesh[id]; }
+  for(const id in fMesh){ gFaces.remove(fMesh[id]); fMesh[id].geometry.dispose(); delete fMesh[id]; }
+  for(const id in M.edges) rebuildEdge(id);
+  for(const id in M.faces) rebuildFace(id);
+  rebuildNodes(); refreshSel();
+}
+function refreshVisibility(){
+  for(const id in eMesh) eMesh[id].visible=layerOf(M.edges[id].layer).visible;
+  for(const id in fMesh) fMesh[id].visible=layerOf(M.faces[id].layer).visible&&S.display!=='wire';
+}
+function refreshAppearance(){
+  clearMatCache();
+  for(const id in eMesh){ eMesh[id].material=edgeMaterial(M.edges[id].ink); eMesh[id].castShadow=S.lights; }
+  for(const id in fMesh){ fMesh[id].material=faceMaterial(M.faces[id].matKey);
+    fMesh[id].castShadow=S.lights; fMesh[id].receiveShadow=S.lights; }
+  refreshVisibility(); updateLights();
+}
+
+/* selection halo */
+const selBox=new THREE.BoxHelper(new THREE.Object3D(),0x1F4FD8);
+selBox.visible=false; if(selBox.material) selBox.material.depthTest=false;
+selBox.renderOrder=8; scene.add(selBox);
+function refreshSel(){
+  const o=sel.kind==='edge'?eMesh[sel.id]:sel.kind==='face'?fMesh[sel.id]:null;
+  if(o){ selBox.setFromObject(o); selBox.visible=true; } else selBox.visible=false;
+}
+function select(kind,id){ sel={kind,id}; refreshSel(); rebuildNodes(); renderDock(); updateReadout(); }
+
+/* =========================================================================
+   lights
+   ========================================================================= */
+function updateLights(){
+  if(S.lights){
+    const az=S.sunAz*Math.PI/180, alt=S.sunAlt*Math.PI/180, r=90;
+    sun.position.set(r*Math.cos(alt)*Math.sin(az),Math.max(2,r*Math.sin(alt)),r*Math.cos(alt)*Math.cos(az));
+    sun.target.position.set(0,0,0);
+    sun.intensity=S.sunInt; sun.castShadow=S.shadows;
+    const warm=1-Math.min(1,S.sunAlt/60);
+    sun.color.setRGB(1,1-warm*.14,1-warm*.30);
+    hemi.intensity=.5; amb.intensity=.26+(S.shadows?0:.2);
+  }else{
+    sun.intensity=0; sun.castShadow=false; hemi.intensity=.85; amb.intensity=.95;
+  }
+  ground.visible=S.shadows&&S.lights;
+}
+
+/* =========================================================================
+   inference
+   ========================================================================= */
+const AXES=[{d:V3(1,0,0),c:0xC8322A,k:'x',n:'แนวแกนแดง (กว้าง)'},
+            {d:V3(0,1,0),c:0x2255CC,k:'y',n:'แนวแกนน้ำเงิน (สูง)'},
+            {d:V3(0,0,1),c:0x2E8B45,k:'z',n:'แนวแกนเขียว (ลึก)'}];
+const TOL=13; // px
+
+const guideLine=new THREE.Line(new THREE.BufferGeometry().setAttribute('position',
+  new THREE.Float32BufferAttribute([0,0,0,0,0,0],3)),
+  new THREE.LineBasicMaterial({color:0xC8322A,transparent:true,opacity:.9,depthTest:false}));
+guideLine.frustumCulled=false; guideLine.renderOrder=10; guideLine.visible=false; gHelp.add(guideLine);
+const snapDot=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),
+  new THREE.MeshBasicMaterial({color:0x2E8B45,depthTest:false}));
+snapDot.renderOrder=11; snapDot.visible=false; gHelp.add(snapDot);
+
+/* direction rosette shown while holding on a point */
+const rosette=new THREE.Group(); rosette.visible=false; gHelp.add(rosette);
+function axRay(d,c){
+  const g=new THREE.BufferGeometry().setAttribute('position',
+    new THREE.Float32BufferAttribute([0,0,0,d.x,d.y,d.z],3));
+  const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:c,depthTest:false,transparent:true,opacity:.95}));
+  l.renderOrder=12; return l;
+}
+[[V3(1,0,0),0xC8322A],[V3(-1,0,0),0xC8322A],[V3(0,0,1),0x2E8B45],[V3(0,0,-1),0x2E8B45],
+ [V3(0,1,0),0x2255CC],[V3(0,-1,0),0x2255CC]].forEach(a=>rosette.add(axRay(a[0],a[1])));
+const anchorRing=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),
+  new THREE.MeshBasicMaterial({color:0x191817,depthTest:false}));
+anchorRing.renderOrder=13; anchorRing.visible=false; gHelp.add(anchorRing);
+function showDir(anchor,color){
+  rosette.position.copy(anchor); rosette.scale.setScalar(cam.radius*.10); rosette.visible=true;
+  anchorRing.position.copy(anchor); anchorRing.scale.setScalar(cam.radius*.009);
+  anchorRing.material.color.setHex(color); anchorRing.visible=true;
+}
+function hideDir(){ rosette.visible=false; anchorRing.visible=false; }
+const LOCKCOL={x:0xC8322A,y:0x2255CC,z:0x2E8B45,ext:0xA83BB8,perp:0xA83BB8,node:0x2E8B45,face:0x1F4FD8};
+function lockOfDir(d){
+  const t=0.002;
+  if(Math.abs(Math.abs(d.x)-1)<t) return 'x';
+  if(Math.abs(Math.abs(d.y)-1)<t) return 'y';
+  if(Math.abs(Math.abs(d.z)-1)<t) return 'z';
+  return null;
+}
+const rubber=new THREE.Line(new THREE.BufferGeometry().setAttribute('position',
+  new THREE.Float32BufferAttribute(new Float32Array(3*8192),3)),
+  new THREE.LineBasicMaterial({color:0x191817,depthTest:false}));
+rubber.frustumCulled=false; rubber.renderOrder=10; rubber.visible=false; gHelp.add(rubber);
+function setRubber(pts){
+  const a=rubber.geometry.attributes.position.array;
+  const n=Math.min(pts.length,8192);
+  for(let i=0;i<n;i++){a[i*3]=pts[i].x;a[i*3+1]=pts[i].y;a[i*3+2]=pts[i].z;}
+  rubber.geometry.attributes.position.needsUpdate=true;
+  rubber.geometry.setDrawRange(0,n); rubber.visible=n>1;
+}
+function setGuide(anchor,dir,color){
+  const L=Math.max(S.boxW,20);
+  const a=anchor.clone().addScaledVector(dir,-L), b=anchor.clone().addScaledVector(dir,L);
+  const arr=guideLine.geometry.attributes.position.array;
+  arr[0]=a.x;arr[1]=a.y;arr[2]=a.z;arr[3]=b.x;arr[4]=b.y;arr[5]=b.z;
+  guideLine.geometry.attributes.position.needsUpdate=true;
+  guideLine.material.color.setHex(color); guideLine.visible=true;
+}
+function hideHelpers(){ guideLine.visible=false; snapDot.visible=false; rubber.visible=false;
+  hideDir(); hud.classList.remove('on'); }
+
+const raycaster=new THREE.Raycaster();
+function ndc(e){return new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);}
+function rayLineClosest(ray,o,d){
+  const w0=new THREE.Vector3().subVectors(o,ray.origin);
+  const b=ray.direction.dot(d), dd=ray.direction.dot(w0), e2=d.dot(w0);
+  const den=1-b*b; if(Math.abs(den)<1e-6) return null;
+  return o.clone().addScaledVector(d,(e2-b*dd)/den);
+}
+function planeHit(ray){
+  const pl=new THREE.Plane(V3(0,1,0),-S.planeH);
+  const p=V3(); return ray.intersectPlane(pl,p)?p:null;
+}
+function snapToGrid(p){
+  if(S.tool==='free') return p;
+  if(!S.snapGrid&&!S.gridDots) return p;
+  const st=S.gridStep;
+  return V3(Math.round(p.x/st)*st,Math.round(p.y/st)*st,Math.round(p.z/st)*st);
+}
+function _oldSnap(p){
+  if(!S.snapGrid) return p;
+  const s=S.gridStep/4;
+  return V3(Math.round(p.x/s)*s,Math.round(p.y/s)*s,Math.round(p.z/s)*s);
+}
+/* main resolver: returns {p, lock, color, label, snapNode} */
+function resolve(e,anchorId,lastDir){
+  raycaster.setFromCamera(ndc(e),camera);
+  const ray=raycaster.ray;
+  const mouse={x:e.clientX,y:e.clientY};
+  const near=(v)=>{const s=toScreen(v);return Math.hypot(s.x-mouse.x,s.y-mouse.y);};
+
+  // 1) existing node snap (highest priority)
+  let best=null,bd=16;
+  for(const k in M.nodes){
+    if(M.nodes[k].soft&&S.tool!=='node') continue;
+    const d=near(nodePos(k)); if(d<bd){bd=d;best=k;}
+  }
+  if(best) return {p:nodePos(best),lock:'node',color:0x2E8B45,label:'จุดปลาย',snapNode:best};
+
+  // 2) on existing face (draw on surface)
+  if(S.snapFace){
+    const hits=raycaster.intersectObjects(Object.values(fMesh),false);
+    if(hits.length){
+      const h=hits[0];
+      const nrm=h.face?h.face.normal.clone().applyMatrix3(new THREE.Matrix3().getNormalMatrix(h.object.matrixWorld)).normalize():V3(0,1,0);
+      return {p:h.point.clone().addScaledVector(nrm,.008),lock:'face',color:0x1F4FD8,label:'บนผิว'};
+    }
+  }
+
+  const free=planeHit(ray);
+  // 2b) grid intersection snap
+  if(free&&S.gridDots){
+    const gp=nearestGridPoint(free);
+    if(near(gp)<14) return {p:gp,lock:'grid',color:0x6E7378,label:'จุดตัดกริด'};
+  }
+  if(anchorId==null) return free?{p:snapToGrid(free),lock:null,color:0x8A8780,label:'ระนาบวาด'}:null;
+
+  const A=nodePos(anchorId);
+  const cands=[];
+  AXES.forEach(ax=>{
+    const p=rayLineClosest(ray,A,ax.d); if(!p) return;
+    cands.push({p,lock:ax.k,color:ax.c,label:ax.n,d:near(p)});
+  });
+  if(lastDir){
+    const p1=rayLineClosest(ray,A,lastDir);
+    if(p1) cands.push({p:p1,lock:'ext',color:0xA83BB8,label:'ต่อแนวเส้นเดิม',d:near(p1)});
+    const perp=new THREE.Vector3().crossVectors(lastDir,V3(0,1,0));
+    if(perp.lengthSq()>1e-6){
+      perp.normalize();
+      const p2=rayLineClosest(ray,A,perp);
+      if(p2) cands.push({p:p2,lock:'perp',color:0xA83BB8,label:'ตั้งฉากกับเส้นเดิม',d:near(p2)});
+    }
+  }
+  cands.sort((a,b)=>a.d-b.d);
+  if(cands.length&&cands[0].d<TOL){
+    const c=cands[0];
+    let p=c.p;
+    if(S.snapGrid){ // quantise along the locked direction
+      const dir=p.clone().sub(A); const L=dir.length();
+      if(L>1e-6){ const q=Math.round(L/(S.gridStep/4))*(S.gridStep/4); p=A.clone().addScaledVector(dir.normalize(),q); }
+    }
+    return {p,lock:c.lock,color:c.color,label:c.label};
+  }
+  return free?{p:snapToGrid(free),lock:null,color:0x8A8780,label:'ระนาบวาด'}:null;
+}
+
+/* cycle → face */
+function tryCloseFace(a,b){
+  const skip=(x,y)=>((x===a&&y===b)||(x===b&&y===a));
+  const prev={},q=[a],seen={[a]:1};
+  while(q.length){
+    const cur=q.shift();
+    for(const e of edgesAt(cur)){
+      const nx=e.a===cur?e.b:e.a;
+      if(skip(cur,nx)) continue;
+      if(seen[nx]) continue;
+      seen[nx]=1; prev[nx]=cur; q.push(nx);
+      if(nx===b){ q.length=0; break; }
+    }
+  }
+  if(!prev[b]&&b!==a) return null;
+  const loop=[b]; let c=b;
+  while(c!==a&&prev[c]!==undefined){ c=prev[c]; loop.push(c); }
+  if(loop[loop.length-1]!==a) return null;
+  if(loop.length<3) return null;
+  const pts=loop.map(nodePos);
+  if(polyArea(pts)<0.02) return null;
+  return addFace(loop);
+}
+
+/* =========================================================================
+   input
+   ========================================================================= */
+const el=renderer.domElement, hud=document.getElementById('hud');
+const pointers=new Map();
+let gesture=null, draw=null, chain=null, nodeDrag=null, massDrag=null;
+let downAt=null, lastMoveT=0, lastMoveP=null;
+
+el.addEventListener('contextmenu',e=>e.preventDefault());
+function isToolPointer(e){
+  if(e.pointerType==='pen') return true;
+  if(e.pointerType==='mouse') return e.button===0&&!e.shiftKey;
+  return pointers.size===1;
+}
+function hudAt(e,txt){
+  hud.innerHTML=txt; hud.classList.add('on');
+  hud.style.left=Math.min(innerWidth-hud.offsetWidth-10,e.clientX+16)+'px';
+  hud.style.top=Math.max(8,e.clientY-42)+'px';
+}
+function fmt(p,A,r){
+  const L=A?p.distanceTo(A):0;
+  let s=fmtU(L);
+  if(A&&L>1e-4){
+    const d=p.clone().sub(A);
+    const horiz=Math.hypot(d.x,d.z);
+    const inc=Math.atan2(d.y,horiz)*180/Math.PI;
+    let bear=Math.atan2(d.x,d.z)*180/Math.PI; if(bear<0)bear+=360;
+    s+='  ทิศ '+bear.toFixed(1)+'°  เอียง '+inc.toFixed(1)+'°';
+  }
+  return s+(r&&r.label?'<em style="color:#'+(r.color||0x8A8780).toString(16).padStart(6,'0')+'">'+r.label+'</em>':'');
+}
+
+el.addEventListener('pointerdown',e=>{
+  el.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
+  if(pointers.size>=2){ abortDraw(); startGesture(); return; }
+  downAt={x:e.clientX,y:e.clientY,t:performance.now()};
+  if(calib&&isToolPointer(e)){ calibTap(e); return; }
+  if(S.setOriginFor&&isToolPointer(e)){
+    raycaster.setFromCamera(ndc(e),camera);
+    const p=planeHit(raycaster.ray);
+    if(p){
+      const r=S.refs.find(x=>x.id===S.setOriginFor);
+      if(r){ r.ox=p.x; r.oz=p.z; if(r.plane!=='xz') r.oy=S.planeH; else r.oy=S.planeH;
+             buildRefMesh(r); }
+      S.setOriginFor=null; renderPanels(); toast('ตั้งจุดเริ่มภาพแล้ว');
+    }
+    return;
+  }
+  if(!isToolPointer(e)){
+    gesture={kind:(e.pointerType==='mouse'&&(e.button===1||e.shiftKey))?'pan':'orbit',x:e.clientX,y:e.clientY};
+    return;
+  }
+  switch(S.tool){
+    case 'orbit': gesture={kind:'orbit',x:e.clientX,y:e.clientY}; break;
+    case 'select': doSelect(e); break;
+    case 'erase': doErase(e); break;
+    case 'node': startNodeDrag(e); break;
+    case 'mass': startMass(e); break;
+    case 'line': startLine(e); break;
+    case 'free': startFree(e); break;
+  }
+});
+el.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId)){
+    if(e.pointerType==='mouse'&&chain&&!draw&&S.tool==='line') hoverChain(e);
+    return;
+  }
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
+  lastMoveT=performance.now();
+  if(gesture){ updateGesture(e); return; }
+  if(nodeDrag){ moveNodeDrag(e); return; }
+  if(massDrag){ updateMass(e); return; }
+  if(draw){ (draw.mode==='free'?extendFree:draw.mode==='linelock'?extendLock:extendLine)(e); return; }
+  if(chain&&e.pointerType==='mouse'){ hoverChain(e); }
+});
+function up(e){
+  pointers.delete(e.pointerId);
+  if(pointers.size===0){
+    if(draw) (draw.mode==='free'?endFree:draw.mode==='linelock'?endLock:endLine)();
+    if(massDrag) endMass();
+    if(nodeDrag) endNodeDrag();
+    gesture=null; downAt=null;
+  }else if(gesture) startGesture();
+}
+el.addEventListener('pointerup',up);
+el.addEventListener('pointercancel',up);
+el.addEventListener('wheel',e=>{e.preventDefault();cam.radius*=1+Math.sign(e.deltaY)*.09;applyCamera();},{passive:false});
+
+/* gestures */
+const plist=()=>[...pointers.values()];
+const avg=(a,k)=>a.reduce((s,o)=>s+o[k],0)/a.length;
+const dst=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function startGesture(){
+  const p=plist();
+  if(p.length>=3) gesture={kind:'pan',x:avg(p,'x'),y:avg(p,'y')};
+  else if(p.length===2) gesture={kind:'orbit2',x:avg(p,'x'),y:avg(p,'y'),d:dst(p[0],p[1])};
+}
+function updateGesture(e){
+  const p=plist();
+  if(gesture.kind==='orbit'){
+    cam.theta-=(e.clientX-gesture.x)*.0075; cam.phi-=(e.clientY-gesture.y)*.0075;
+    gesture.x=e.clientX; gesture.y=e.clientY;
+  }else if(gesture.kind==='orbit2'&&p.length>=2){
+    const cx=avg(p,'x'),cy=avg(p,'y'),d=dst(p[0],p[1]);
+    cam.theta-=(cx-gesture.x)*.0075; cam.phi-=(cy-gesture.y)*.0075;
+    if(gesture.d>0) cam.radius*=gesture.d/Math.max(1,d);
+    gesture.x=cx;gesture.y=cy;gesture.d=d;
+  }else if(gesture.kind==='pan'){
+    const cx=p.length>1?avg(p,'x'):e.clientX, cy=p.length>1?avg(p,'y'):e.clientY;
+    const sc=cam.radius*.0016;
+    const R=new THREE.Vector3().setFromMatrixColumn(camera.matrix,0);
+    const U=new THREE.Vector3().setFromMatrixColumn(camera.matrix,1);
+    cam.target.addScaledVector(R,-(cx-gesture.x)*sc).addScaledVector(U,(cy-gesture.y)*sc);
+    gesture.x=cx;gesture.y=cy;
+  }
+  applyCamera();
+}
+
+/* select / erase */
+function pickables(){
+  const arr=[];
+  for(const id in eMesh) if(eMesh[id].visible) arr.push(eMesh[id]);
+  for(const id in fMesh) if(fMesh[id].visible) arr.push(fMesh[id]);
+  return arr;
+}
+function doSelect(e){
+  raycaster.setFromCamera(ndc(e),camera);
+  raycaster.params.Points.threshold=cam.radius*.012;
+  const np=raycaster.intersectObject(ptsMain,false);
+  if(np.length){ const ids=ptsMain.userData.ids; select('node',ids[np[0].index]); return; }
+  const h=raycaster.intersectObjects(pickables(),false);
+  if(h.length) select(h[0].object.userData.kind,h[0].object.userData.id);
+  else select(null,null);
+}
+function doErase(e){
+  raycaster.setFromCamera(ndc(e),camera);
+  const h=raycaster.intersectObjects(pickables(),false);
+  if(!h.length) return;
+  commit();
+  const u=h[0].object.userData;
+  if(u.kind==='edge') deleteEdge(u.id); else deleteFace(u.id);
+  rebuildAll(); updateReadout();
+}
+
+/* node drag */
+function startNodeDrag(e){
+  raycaster.setFromCamera(ndc(e),camera);
+  raycaster.params.Points.threshold=cam.radius*.014;
+  let hit=raycaster.intersectObject(ptsMain,false);
+  let ids=ptsMain.userData.ids;
+  if(!hit.length){ hit=raycaster.intersectObject(ptsSoft,false); ids=ptsSoft.userData.ids; }
+  if(!hit.length){ gesture={kind:'orbit',x:e.clientX,y:e.clientY}; return; }
+  const id=ids[hit[0].index];
+  commit();
+  nodeDrag={id,plane:new THREE.Plane().setFromNormalAndCoplanarPoint(
+    camera.getWorldDirection(V3()).negate(),nodePos(id))};
+  select('node',id);
+}
+function moveNodeDrag(e){
+  raycaster.setFromCamera(ndc(e),camera);
+  const A=nodePos(nodeDrag.id);
+  const r=resolveNodeTarget(e,A);
+  if(!r) return;
+  const n=M.nodes[nodeDrag.id];
+  n.p=[r.p.x,r.p.y,r.p.z];
+  edgesAt(nodeDrag.id).forEach(ed=>rebuildEdge(ed.id));
+  for(const k in M.faces) if(M.faces[k].loop.includes(nodeDrag.id)) rebuildFace(k);
+  rebuildNodes(); refreshSel();
+  hudAt(e,'ย้ายจุด '+r.p.x.toFixed(2)+', '+r.p.y.toFixed(2)+', '+r.p.z.toFixed(2));
+  if(r.lock&&r.lock!=='node') setGuide(A,r.dir||V3(0,1,0),r.color); else guideLine.visible=false;
+}
+function resolveNodeTarget(e,A){
+  const ray=raycaster.ray, m={x:e.clientX,y:e.clientY};
+  const near=v=>{const s=toScreen(v);return Math.hypot(s.x-m.x,s.y-m.y);};
+  const cands=[];
+  AXES.forEach(ax=>{const p=rayLineClosest(ray,A,ax.d);if(p)cands.push({p,lock:ax.k,color:ax.c,dir:ax.d,d:near(p)});});
+  cands.sort((a,b)=>a.d-b.d);
+  if(cands.length&&cands[0].d<TOL) return cands[0];
+  const p=V3();
+  return nodeDrag.plane&&ray.intersectPlane(nodeDrag.plane,p)?{p:snapToGrid(p),lock:null}:null;
+}
+function endNodeDrag(){ nodeDrag=null; hideHelpers(); rebuildAll(); }
+
+/* ---------- freehand ---------- */
+function startFree(e){
+  const r=resolve(e,null,null); if(!r) return;
+  commit();
+  const startId=r.snapNode||addNode(r.p,r.lock,false);
+  draw={mode:'free',anchor:startId,trail:[nodePos(startId)],startId,committed:[startId],straightT:0,t0:performance.now()};
+  lastMoveP={x:e.clientX,y:e.clientY}; lastMoveT=performance.now();
+}
+function extendFree(e){
+  const r=resolve(e,null,null); if(!r) return;
+  const t=draw.trail, last=t[t.length-1];
+  const minD=Math.max(.02,cam.radius*.0035);
+  if(r.p.distanceTo(last)<minD) return;
+  t.push(r.p.clone());
+  setRubber(t);
+  hudAt(e,fmt(r.p,nodePos(draw.anchor),r));
+  if(Math.hypot(e.clientX-(lastMoveP?lastMoveP.x:0),e.clientY-(lastMoveP?lastMoveP.y:0))>5){
+    lastMoveP={x:e.clientX,y:e.clientY}; lastMoveT=performance.now(); draw.straightT=0;
+  }
+}
+/* hold-still → straighten current run, or arm the direction picker */
+function checkHold(){
+  if(!draw) return;
+  if(draw.mode==='line'&&!draw.armed&&!draw.preview&&performance.now()-draw.t0>260){
+    draw.armed=true;
+    showDir(nodePos(chain.anchor),0x191817);
+    toast('จับทิศแล้ว — ลากไปตามแนวที่ต้องการ');
+    return;
+  }
+  if(draw.mode!=='free') return;
+  if(performance.now()-lastMoveT<340) return;
+  const t=draw.trail;
+  if(t.length<3){   // held still at the very start → switch to direction-locked straight line
+    if(!draw.locked&&t.length<=2&&performance.now()-draw.t0>300){
+      draw.locked=true; draw.mode='linelock';
+      showDir(nodePos(draw.anchor),0x191817);
+      setRubber([]); toast('จับทิศแล้ว — ลากไปตามแนวที่ต้องการ');
+    }
+    return;
+  }
+  const A=nodePos(draw.anchor), B=t[t.length-1];
+  if(A.distanceTo(B)<0.05) return;
+  draw.trail=[A,B.clone()];
+  const id=addNode(B,'straight',false);
+  const eId=addEdge(draw.anchor,id);
+  if(eId) rebuildEdge(eId);
+  draw.committed.push(id);
+  draw.anchor=id; draw.trail=[B.clone()];
+  rebuildNodes(); setRubber(draw.trail);
+  lastMoveT=performance.now();
+  toast('ดัดเป็นเส้นตรงแล้ว — วาดต่อได้เลย');
+}
+function rdp(pts,eps){
+  if(pts.length<3) return pts;
+  let idx=0,dmax=0;
+  const a=pts[0],b=pts[pts.length-1];
+  const ab=b.clone().sub(a), L=ab.length();
+  for(let i=1;i<pts.length-1;i++){
+    let d;
+    if(L<1e-9) d=pts[i].distanceTo(a);
+    else{
+      const t=clamp(pts[i].clone().sub(a).dot(ab)/(L*L),0,1);
+      d=pts[i].distanceTo(a.clone().addScaledVector(ab,t));
+    }
+    if(d>dmax){dmax=d;idx=i;}
+  }
+  if(dmax>eps){
+    const l=rdp(pts.slice(0,idx+1),eps), r=rdp(pts.slice(idx),eps);
+    return l.slice(0,-1).concat(r);
+  }
+  return [a,b];
+}
+function endFree(){
+  const d=draw; draw=null; hideHelpers();
+  if(!d) return;
+  let pts=d.trail;
+  if(pts.length>=2){
+    pts=rdp(pts,Math.max(.03,cam.radius*.004));
+    let prev=d.anchor;
+    for(let i=1;i<pts.length;i++){
+      const isLast=i===pts.length-1;
+      let target=null;
+      if(isLast){
+        for(const k in M.nodes){
+          if(k===prev) continue;
+          if(nodePos(k).distanceTo(pts[i])<Math.max(.06,cam.radius*.012)){target=k;break;}
+        }
+      }
+      const id=target||addNode(pts[i],null,!isLast);
+      const eId=addEdge(prev,id);
+      if(eId){ rebuildEdge(eId); const f=tryCloseFace(prev,id); if(f) rebuildFace(f); }
+      prev=id;
+    }
+  }
+  rebuildNodes(); updateReadout();
+}
+function abortDraw(){ if(draw){draw=null;} chain=null; hideHelpers(); }
+
+/* ---------- straight line: tap point 1, then press-hold-drag-release for point 2 ---------- */
+function startLine(e){
+  const r=resolve(e,chain?chain.anchor:null,chain?chain.lastDir:null); if(!r) return;
+  if(!chain){
+    // point 1 — a plain tap, no holding needed
+    commit();
+    const id=r.snapNode||addNode(r.p,r.lock,false);
+    chain={anchor:id,lastDir:null,start:id};
+    rebuildNodes(); renderDock();
+    showDir(nodePos(id),LOCKCOL[r.lock]||0x191817);
+    toast(S.keyLen?('จุดแรกแล้ว — ล็อกระยะ '+fmtU(S.keyLen)+' · กดค้างแล้วลากเลือกทิศ')
+                  :'จุดแรกแล้ว — กดค้างจุดที่ 2 แล้วลากไปตามทิศที่ต้องการ');
+    return;
+  }
+  // point 2 — direction picker is live from the moment of press
+  draw={mode:'line',preview:null,t0:performance.now(),armed:true};
+  showDir(nodePos(chain.anchor),0x191817);
+  extendLine(e);
+}
+/* apply the keyed-in length along the chosen direction */
+function applyKeyLen(A,r){
+  if(!S.keyLen||S.keyLen<=0) return r;
+  const d=r.p.clone().sub(A);
+  if(d.lengthSq()<1e-10) return r;
+  const dir=d.normalize();
+  const p=A.clone().addScaledVector(dir,S.keyLen);
+  return {p,lock:r.lock||lockOfDir(dir),color:r.color,label:(r.label||'')+' · ล็อก '+fmtU(S.keyLen),keyed:true};
+}
+function extendLine(e){
+  const r0=resolve(e,chain?chain.anchor:null,chain?chain.lastDir:null); if(!r0) return;
+  const A=nodePos(chain.anchor);
+  const r=applyKeyLen(A,r0);
+  draw.preview=r;
+  setRubber([A,r.p]);
+  const dir=r.p.clone().sub(A);
+  if(r.lock&&r.lock!=='node'&&r.lock!=='face'&&dir.lengthSq()>1e-8) setGuide(A,dir.clone().normalize(),r.color);
+  else guideLine.visible=false;
+  showDir(A,LOCKCOL[r.lock]||0x191817);
+  if(r0.snapNode&&!r.keyed){ snapDot.position.copy(r.p); snapDot.scale.setScalar(cam.radius*.006); snapDot.visible=true; }
+  else snapDot.visible=false;
+  hudAt(e,fmt(r.p,A,r));
+}
+function hoverChain(e){
+  if(!chain||draw) return;
+  const r0=resolve(e,chain.anchor,chain.lastDir); if(!r0) return;
+  const A=nodePos(chain.anchor);
+  const r=applyKeyLen(A,r0);
+  setRubber([A,r.p]);
+  const dir=r.p.clone().sub(A);
+  if(r.lock&&r.lock!=='node'&&r.lock!=='face'&&dir.lengthSq()>1e-8) setGuide(A,dir.clone().normalize(),r.color);
+  else guideLine.visible=false;
+  showDir(A,LOCKCOL[r.lock]||0x191817);
+  if(r0.snapNode&&!r.keyed){ snapDot.position.copy(r.p); snapDot.scale.setScalar(cam.radius*.006); snapDot.visible=true; }
+  else snapDot.visible=false;
+  hudAt(e,fmt(r.p,A,r));
+  chain.pending=r;
+}
+function placeLinePoint(r){
+  if(!chain||!r) return;
+  const A=nodePos(chain.anchor);
+  if(r.p.distanceTo(A)<1e-4) return;
+  let target=r.keyed?null:r.snapNode;
+  if(r.keyed){ // keyed length may land on an existing node anyway
+    for(const k in M.nodes) if(nodePos(k).distanceTo(r.p)<1e-4){ target=k; break; }
+  }
+  const id=target||addNode(r.p,r.lock,false);
+  const eId=addEdge(chain.anchor,id);
+  if(eId){ rebuildEdge(eId); const f=tryCloseFace(chain.anchor,id); if(f){ rebuildFace(f); toast('ปิดวงเป็นเพลนแล้ว'); } }
+  chain.lastDir=r.p.clone().sub(A).normalize();
+  chain.anchor=id;
+  if(target&&target===chain.start){ chain=null; hideHelpers(); toast('ปิดวงเรียบร้อย'); }
+  rebuildNodes(); updateReadout(); renderDock();
+}
+function endLine(){
+  const d=draw; draw=null;
+  if(d&&d.preview) placeLinePoint(d.preview);
+  else if(chain&&chain.pending) placeLinePoint(chain.pending);
+  setRubber([]); guideLine.visible=false; snapDot.visible=false;
+  if(chain) showDir(nodePos(chain.anchor),0x191817); else hideDir();
+}
+function finishChain(){ chain=null; hideHelpers(); renderDock(); toast('จบเส้นแล้ว'); }
+/* freehand's hold-to-lock straight segment */
+function extendLock(e){
+  const r0=resolve(e,draw.anchor,null); if(!r0) return;
+  const A=nodePos(draw.anchor);
+  const r=applyKeyLen(A,r0);
+  draw.preview=r;
+  setRubber([A,r.p]);
+  const dir=r.p.clone().sub(A);
+  if(r.lock&&r.lock!=='node'&&r.lock!=='face'&&dir.lengthSq()>1e-8) setGuide(A,dir.clone().normalize(),r.color);
+  else guideLine.visible=false;
+  showDir(A,LOCKCOL[r.lock]||0x191817);
+  hudAt(e,fmt(r.p,A,r));
+}
+function endLock(){
+  const d=draw; draw=null; hideHelpers();
+  if(!d||!d.preview) return;
+  const r=d.preview;
+  let target=r.keyed?null:r.snapNode;
+  const id=target||addNode(r.p,r.lock,false);
+  const eId=addEdge(d.anchor,id);
+  if(eId){ rebuildEdge(eId); const f=tryCloseFace(d.anchor,id); if(f) rebuildFace(f); }
+  rebuildNodes(); updateReadout();
+}
+
+/* ---------- mass box ---------- */
+function startMass(e){
+  const r=resolve(e,null,null); if(!r) return;
+  commit(); massDrag={o:r.p.clone(),pts:null,preview:null};
+}
+function updateMass(e){
+  const r=resolve(e,null,null); if(!r||!massDrag) return;
+  const o=massDrag.o, d=r.p.clone().sub(o);
+  const a=d.x, b=d.z;
+  massDrag.pts=[o.clone(),V3(o.x+a,o.y,o.z),V3(o.x+a,o.y,o.z+b),V3(o.x,o.y,o.z+b)];
+  const top=massDrag.pts.map(p=>V3(p.x,p.y+S.massH,p.z));
+  setRubber(massDrag.pts.concat([massDrag.pts[0]]).concat(top).concat([top[0]]));
+  hudAt(e,Math.abs(a).toFixed(2)+' × '+Math.abs(b).toFixed(2)+' × '+S.massH.toFixed(2)+' m');
+}
+function endMass(){
+  const md=massDrag; massDrag=null; hideHelpers();
+  if(!md||!md.pts) return;
+  const p=md.pts;
+  if(Math.abs(p[1].x-p[0].x)<.05||Math.abs(p[3].z-p[0].z)<.05) return;
+  const bot=p.map(q=>addNode(q,null,false));
+  const top=p.map(q=>addNode(V3(q.x,q.y+S.massH,q.z),'y',false));
+  for(let i=0;i<4;i++){
+    addEdge(bot[i],bot[(i+1)%4]); addEdge(top[i],top[(i+1)%4]); addEdge(bot[i],top[i]);
+  }
+  addFace(bot); addFace(top);
+  for(let i=0;i<4;i++) addFace([bot[i],bot[(i+1)%4],top[(i+1)%4],top[i]]);
+  rebuildAll(); updateReadout();
+}
+
+/* ---------- extrude face ---------- */
+function extrudeSelected(h){
+  if(sel.kind!=='face'){toast('เลือกผิวที่จะดันขึ้นก่อน');return;}
+  const f=M.faces[sel.id];
+  const pts=f.loop.map(nodePos);
+  const n=newellNormal(pts);
+  commit();
+  const top=f.loop.map(id=>addNode(nodePos(id).addScaledVector(n,h),null,false));
+  const L=f.loop.length;
+  for(let i=0;i<L;i++){
+    addEdge(top[i],top[(i+1)%L]); addEdge(f.loop[i],top[i]);
+  }
+  const tf=addFace(top,f.matKey);
+  for(let i=0;i<L;i++) addFace([f.loop[i],f.loop[(i+1)%L],top[(i+1)%L],top[i]],f.matKey);
+  rebuildAll(); if(tf) select('face',tf);
+  toast('ดันขึ้น '+h.toFixed(2)+' m');
+}
+
+/* =========================================================================
+   UI
+   ========================================================================= */
+const dock=document.getElementById('dock'), readout=document.getElementById('readout');
+const ICON={
+  free:'<svg viewBox="0 0 24 24"><path d="M3 17c3-6 5 3 8-2s4 4 10-4"/></svg>',
+  line:'<svg viewBox="0 0 24 24"><path d="M5 19 19 5"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/></svg>',
+  box:'<svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>',
+  node:'<svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8 16 16 8"/></svg>',
+  cursor:'<svg viewBox="0 0 24 24"><path d="M5 3l14 7.5-6 1.6L10.5 19z"/></svg>',
+  orbit:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><ellipse cx="12" cy="12" rx="10" ry="4.4" transform="rotate(-24 12 12)"/></svg>',
+  erase:'<svg viewBox="0 0 24 24"><path d="m5 15 6-6 8 8-3 3H8z"/><path d="M4 21h16"/></svg>',
+  up:'<svg viewBox="0 0 24 24"><path d="M12 20V6"/><path d="M6 11l6-6 6 6"/><path d="M4 21h16"/></svg>',
+  fill:'<svg viewBox="0 0 24 24"><path d="M4 17V7l8-4 8 4v10l-8 4z"/></svg>',
+  stop:'<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  sun:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M19.1 4.9l-1.5 1.5M6.4 17.6l-1.5 1.5"/></svg>',
+};
+const tBtn=(id,l,ic,dis)=>`<button class="tool" data-tool="${id}" aria-pressed="${S.tool===id}" ${dis?'disabled':''}>${ic}<span>${l}</span></button>`;
+const sl=(id,l,mn,mx,st,v,f)=>`<div class="row"><span class="lab">${l}</span><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" value="${v}"><span class="val" id="${id}_v">${f}</span></div>`;
+const styleSVG={solid:'M2 5h30',dash:'M2 5h7M13 5h7M24 5h7',dot:'M2 5h2M8 5h2M14 5h2M20 5h2M26 5h2M31 5h1',dashdot:'M2 5h8M14 5h2M20 5h8'};
+
+function renderDock(){
+  let h='';
+  if(S.phase===0){
+    h+=`<div class="tools">
+      ${tBtn('free','ฟรีแฮนด์',ICON.free)}${tBtn('line','เส้นตรง',ICON.line)}
+      ${tBtn('mass','แมสกล่อง',ICON.box)}${tBtn('node','โหนด',ICON.node)}
+      ${tBtn('erase','ยางลบ',ICON.erase)}${tBtn('select','เลือก',ICON.cursor)}${tBtn('orbit','หมุนมุม',ICON.orbit)}
+    </div>`;
+    if(chain) h+=`<div class="chips"><button class="chip" id="btnFinish">${ICON.stop}จบเส้น</button>
+      <span class="lab">กำลังลากเส้นต่อเนื่อง — แตะจุดเริ่มเพื่อปิดวง</span></div>`;
+    if(S.tool==='line'||S.tool==='free'){
+      const u=uInfo();
+      h+=`<div class="vcb">
+        <span class="cap">ล็อกระยะ</span>
+        <input class="num ${S.keyLen?'armed':''}" id="vLen" inputmode="decimal" placeholder="อิสระ"
+          value="${S.keyLen?toU(S.keyLen).toFixed(u.dec):''}">
+        <span class="unit">${u.n}</span>
+        <button class="chip" id="vClear">ปล่อยอิสระ</button>
+        <span class="lab" style="min-width:0">${S.keyLen?'เส้นจะยาว '+fmtU(S.keyLen)+' ตามทิศที่ลาก':'เส้นจะไปหยุดตรงจุดที่ปล่อยมือ'}</span>
+      </div>`;
+      h+=`<div class="legend">
+        <span><i style="background:#C8322A"></i>แกน X กว้าง</span>
+        <span><i style="background:#2E8B45"></i>แกน Z ลึก</span>
+        <span><i style="background:#2255CC"></i>แกน Y สูง</span>
+        <span><i style="background:#A83BB8"></i>ต่อแนว/ฉาก</span>
+        <span><i style="background:#6E7378"></i>จุดตัดกริด</span>
+      </div>`;
+    }
+    h+=sl('sH','ระดับ ม.',-8,40,.25,S.planeH,S.planeH.toFixed(2)+' m');
+    if(S.tool==='mass') h+=sl('sMass','สูงกล่อง',.5,40,.25,S.massH,S.massH.toFixed(2)+' m');
+    if(S.tool==='free'||S.tool==='line'){
+      h+=sl('sW','เส้นหนา',.008,.16,.002,S.weight,(S.weight*100).toFixed(1)+' cm');
+      h+=`<div class="chips">`+STYLES.map(s=>
+        `<button class="chip" data-style="${s.key}" aria-pressed="${S.lineStyle===s.key}"><svg viewBox="0 0 34 10"><path d="${styleSVG[s.key]}"/></svg>${s.name}</button>`).join('')+`</div>`;
+      h+=`<div class="chips">`+INKS.map(i=>
+        `<button class="chip" data-ink="${i.key}" aria-pressed="${S.ink===i.key}"><span style="width:12px;height:12px;border-radius:3px;background:#${i.color.toString(16).padStart(6,'0')}"></span>${i.name}</button>`).join('')+
+        `<button class="chip" id="btnSnapFace" aria-pressed="${S.snapFace}">เกาะผิว</button>
+         <button class="chip" id="btnSnapGrid" aria-pressed="${S.snapGrid}">เกาะกริด</button></div>`;
+    }
+    h+=`<div class="hint">${S.tool==='free'?'ลากวาดอิสระ — <b>ค้างนิ่ง</b> เพื่อดัดช่วงที่วาดให้เป็นเส้นตรงแล้ววาดต่อ':
+      S.tool==='line'?'ลากทีละช่วง เส้นจะต่อกันไปเรื่อย ๆ · ไกด์สีบอกแนวแกนที่กำลังเกาะอยู่':
+      S.tool==='node'?'ลากจุดเพื่อดัดรูปทรง — ลากออกตามแนวแกนจะมีไกด์สีขึ้นให้':
+      S.tool==='erase'?'แตะเส้นหรือผิวเพื่อลบทีละชิ้น':
+      'Apple Pencil วาดได้ทันที · 2 นิ้วหมุน · 3 นิ้วเลื่อน'}</div>`;
+  }
+  if(S.phase===1){
+    const isFace=sel.kind==='face';
+    h+=`<div class="tools">${tBtn('select','เลือกชิ้น',ICON.cursor)}${tBtn('node','โหนด',ICON.node)}
+      ${tBtn('erase','ยางลบ',ICON.erase)}${tBtn('orbit','หมุนมุม',ICON.orbit)}
+      <button class="tool" id="btnExtrude" ${isFace?'':'disabled'}>${ICON.up}<span>ดันขึ้น</span></button></div>`;
+    h+=sl('sEx','ระยะดัน',.25,30,.25,S.extrude,S.extrude.toFixed(2)+' m');
+    h+=`<div class="hint">${isFace?'กด <b>ดันขึ้น</b> เพื่อเปลี่ยนผิวเป็นก้อนตามแนวตั้งฉากของผิวนั้น':
+      'ผิวจะถูกสร้างอัตโนมัติเมื่อเส้นบรรจบครบวง — แตะเลือกผิวเพื่อทำงานต่อ'}</div>`;
+  }
+  if(S.phase===2){
+    h+=`<div class="tools">${tBtn('select','เลือกผิว',ICON.cursor)}${tBtn('orbit','หมุนมุม',ICON.orbit)}</div>`;
+    h+=`<div class="swatches labeled">`+MATS.map(m=>
+      `<button class="sw" data-mat="${m.key}" aria-pressed="${S.mat===m.key}" style="background:#${m.color.toString(16).padStart(6,'0')}${m.key==='glass'?';opacity:.75':''}"><i>${m.name}</i></button>`).join('')+`</div>`;
+    h+=`<div class="hint">${sel.kind==='face'?'แตะสีเพื่อใส่ให้ผิวที่เลือก':'เลือกผิวก่อน แล้วแตะสี — ถ้ายังไม่เลือก จะตั้งเป็นค่าเริ่มต้นของผิวถัดไป'}</div>`;
+  }
+  if(S.phase===3){
+    h+=`<div class="tools">${tBtn('orbit','หมุนมุม',ICON.orbit)}${tBtn('select','เลือกชิ้น',ICON.cursor)}
+      <button class="tool" id="btnShadow" aria-pressed="${S.shadows}">${ICON.sun}<span>${S.shadows?'เงาเปิด':'เงาปิด'}</span></button></div>`;
+    h+=sl('sAz','ทิศแดด',0,360,1,S.sunAz,S.sunAz+'°');
+    h+=sl('sAlt','มุมสูง',3,89,1,S.sunAlt,S.sunAlt+'°');
+    h+=sl('sInt','ความแรง',.2,3,.05,S.sunInt,S.sunInt.toFixed(2));
+    h+=`<div class="hint">${S.lights?'มุมสูงต่ำ ๆ ให้เงายาวและแสงอุ่นแบบเช้า-เย็น':'ตอนนี้ปิดแสงอยู่ (โหมดแบน) — เปิดได้ในเมนูมุมมอง'}</div>`;
+  }
+  dock.innerHTML=h; bindDock();
+}
+function bindDock(){
+  dock.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{
+    if(S.tool==='line'&&b.dataset.tool!=='line') chain=null;
+    S.tool=b.dataset.tool; hideHelpers(); rebuildNodes(); renderDock(); updateReadout();
+  });
+  dock.querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{
+    S.lineStyle=b.dataset.style;
+    if(sel.kind==='edge'){ commit(); M.edges[sel.id].style=S.lineStyle; rebuildEdge(sel.id); }
+    renderDock();
+  });
+  dock.querySelectorAll('[data-ink]').forEach(b=>b.onclick=()=>{
+    S.ink=b.dataset.ink;
+    if(sel.kind==='edge'){ commit(); M.edges[sel.id].ink=S.ink; rebuildEdge(sel.id); }
+    renderDock();
+  });
+  dock.querySelectorAll('[data-mat]').forEach(b=>b.onclick=()=>{
+    S.mat=b.dataset.mat;
+    if(sel.kind==='face'){ commit(); M.faces[sel.id].matKey=S.mat; rebuildFace(sel.id); }
+    renderDock();
+  });
+  const g=id=>document.getElementById(id);
+  const bs=(id,fn)=>{const s=g(id); if(s) s.addEventListener('input',()=>fn(parseFloat(s.value)));};
+  bs('sH',v=>{S.planeH=v;g('sH_v').textContent=v.toFixed(2)+' m';updateReadout();});
+  bs('sMass',v=>{S.massH=v;g('sMass_v').textContent=v.toFixed(2)+' m';});
+  bs('sW',v=>{S.weight=v;g('sW_v').textContent=(v*100).toFixed(1)+' cm';
+    if(sel.kind==='edge'){M.edges[sel.id].w=v;rebuildEdge(sel.id);}});
+  bs('sEx',v=>{S.extrude=v;g('sEx_v').textContent=v.toFixed(2)+' m';});
+  bs('sAz',v=>{S.sunAz=v;g('sAz_v').textContent=v+'°';updateLights();});
+  bs('sAlt',v=>{S.sunAlt=v;g('sAlt_v').textContent=v+'°';updateLights();});
+  bs('sInt',v=>{S.sunInt=v;g('sInt_v').textContent=v.toFixed(2);updateLights();});
+  if(g('btnFinish')) g('btnFinish').onclick=finishChain;
+  const vl=g('vLen');
+  if(vl){
+    const readLen=()=>{
+      const v=parseFloat(vl.value);
+      S.keyLen=(isFinite(v)&&v>0)?toM(v):null;
+      vl.classList.toggle('armed',!!S.keyLen);
+    };
+    vl.addEventListener('input',readLen);
+    vl.addEventListener('change',()=>{readLen();renderDock();});
+    vl.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); readLen(); vl.blur(); renderDock(); } });
+  }
+  if(g('vClear')) g('vClear').onclick=()=>{S.keyLen=null;renderDock();};
+  if(g('btnSnapFace')) g('btnSnapFace').onclick=()=>{S.snapFace=!S.snapFace;renderDock();};
+  if(g('btnSnapGrid')) g('btnSnapGrid').onclick=()=>{S.snapGrid=!S.snapGrid;renderDock();};
+  if(g('btnExtrude')) g('btnExtrude').onclick=()=>extrudeSelected(S.extrude);
+  if(g('btnShadow')) g('btnShadow').onclick=()=>{S.shadows=!S.shadows;updateLights();syncGuideVis();renderDock();};
+}
+
+/* phases */
+document.querySelectorAll('.phase').forEach(p=>p.onclick=()=>{
+  S.phase=+p.dataset.phase;
+  document.querySelectorAll('.phase').forEach(x=>x.setAttribute('aria-selected',x===p));
+  chain=null; hideHelpers();
+  if(S.phase>0&&['free','line','mass'].includes(S.tool)) S.tool='select';
+  if(S.phase===0&&S.tool==='select') S.tool='free';
+  rebuildNodes(); renderDock(); updateReadout();
+});
+
+/* ---------- panels ---------- */
+const pView=document.getElementById('panelView'), pLay=document.getElementById('panelLayers'),
+      pFile=document.getElementById('panelFile'), pRefs=document.getElementById('panelRefs');
+function togglePanel(p){ [pView,pLay,pFile,pRefs].forEach(x=>{ if(x!==p) x.classList.remove('on'); }); p.classList.toggle('on'); }
+document.getElementById('btnRefs').onclick=()=>{renderPanels();togglePanel(pRefs);};
+document.getElementById('btnView').onclick=()=>{renderPanels();togglePanel(pView);};
+document.getElementById('btnLayers').onclick=()=>{renderPanels();togglePanel(pLay);};
+document.getElementById('btnFile').onclick=()=>{renderPanels();togglePanel(pFile);};
+
+const eye=on=>on?'<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'
+                :'<svg viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M9.9 5.3A9.8 9.8 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.4 4.1M6.5 7.5A17 17 0 0 0 2 12s4 7 10 7a9.7 9.7 0 0 0 4-.8"/></svg>';
+const tog=(id,label,on,dot)=>`<button class="tog" data-t="${id}" aria-pressed="${on}"><span class="box"></span>${dot?`<span class="dot" style="background:${dot}"></span>`:''}<span>${label}</span></button>`;
+
+function renderPanels(){
+  pView.innerHTML=`
+    <h3>มุมมองและการแสดงผล</h3><p class="note">DISPLAY</p>
+    <div class="grp"><div class="t">รูปแบบการแสดง</div>
+      <div class="seg">
+        <button data-disp="wire" aria-pressed="${S.display==='wire'}">เส้น</button>
+        <button data-disp="solid" aria-pressed="${S.display==='solid'}">ทึบ</button>
+        <button data-disp="xray" aria-pressed="${S.display==='xray'}">โปร่ง</button>
+      </div></div>
+    <div class="grp"><div class="t">การเรนเดอร์</div>
+      ${tog('lights','แสงและเงา',S.lights)}
+      ${tog('materials','วัสดุ / สี',S.materials)}
+    </div>
+    <div class="grp"><div class="t">กล่องไกด์ · GUIDE BOX</div>
+      ${tog('gXZ','กริดระนาบพื้น',S.gXZ,'#B6B2A8')}
+      ${tog('gXY','กริดผนังหน้า (สูง×กว้าง)',S.gXY,'#BEBAB0')}
+      ${tog('gYZ','กริดผนังข้าง (สูง×ลึก)',S.gYZ,'#BEBAB0')}
+      ${tog('gAxes','แนวแกนอ้างอิง',S.gAxes,'#C8322A')}
+      ${tog('gridDots','โหนดที่จุดตัดกริด',S.gridDots,'#6E7378')}
+      ${tog('snapGrid','เกาะกริดตอนวาด',S.snapGrid)}
+    </div>
+    <div class="grp"><div class="t">หน่วย</div>
+      <div class="seg" id="unitSeg">
+        <button data-u="mm" aria-pressed="${S.unit==='mm'}">มม.</button>
+        <button data-u="cm" aria-pressed="${S.unit==='cm'}">ซม.</button>
+        <button data-u="m" aria-pressed="${S.unit==='m'}">ม.</button>
+      </div></div>
+    <div class="grp"><div class="t">ระยะกริด</div>
+      <div class="seg" id="gridSeg">
+        <button data-g="0.01" aria-pressed="${Math.abs(S.gridStep-0.01)<1e-9}">10 มม.</button>
+        <button data-g="0.1" aria-pressed="${Math.abs(S.gridStep-0.1)<1e-9}">100 มม.</button>
+        <button data-g="1" aria-pressed="${Math.abs(S.gridStep-1)<1e-9}">1 ม.</button>
+      </div>
+      <div class="mini" style="margin-top:8px"><label>อิสระ</label>
+        <input class="num" id="gFree" value="${toU(S.gridStep).toFixed(uInfo().dec)}"><span class="unit">${uInfo().n}</span></div>
+    </div>
+    <div class="grp"><div class="t">ขนาดกล่อง</div>
+      ${sl('gW','กว้างกล่อง',10,120,5,S.boxW,S.boxW+' m')}
+      ${sl('gH','สูงกล่อง',5,60,1,S.boxH,S.boxH+' m')}
+    </div>`;
+  pView.querySelectorAll('#unitSeg button').forEach(b=>b.onclick=()=>{
+    S.unit=b.dataset.u; renderPanels(); renderDock(); updateReadout();
+  });
+  pView.querySelectorAll('#gridSeg button').forEach(b=>b.onclick=()=>{
+    S.gridStep=parseFloat(b.dataset.g); buildGuides(); buildGridDots(true); renderPanels(); updateReadout();
+  });
+  pView.querySelectorAll('[data-disp]').forEach(b=>b.onclick=()=>{
+    S.display=b.dataset.disp; refreshAppearance(); renderPanels(); updateReadout();
+  });
+  pView.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.t; S[k]=!S[k];
+    if(k==='lights'||k==='materials') refreshAppearance();
+    if(k==='gridDots') buildGridDots(true);
+    syncGuideVis(); renderPanels(); renderDock(); updateReadout();
+  });
+  const g=id=>document.getElementById(id);
+  const bs=(id,fn)=>{const s=g(id); if(s) s.addEventListener('input',()=>fn(parseFloat(s.value)));};
+  bs('gW',v=>{S.boxW=v;g('gW_v').textContent=v+' m';buildGuides();updateReadout();});
+  bs('gH',v=>{S.boxH=v;g('gH_v').textContent=v+' m';buildGuides();updateReadout();});
+  const gf=g('gFree');
+  if(gf) gf.onchange=()=>{
+    const v=parseFloat(gf.value);
+    if(isFinite(v)&&v>0){ S.gridStep=clamp(toM(v),0.001,10); buildGuides(); buildGridDots(true); renderPanels(); updateReadout(); }
+  };
+
+  const counts={};
+  M.layers.forEach(l=>counts[l.id]=0);
+  for(const k in M.edges) counts[M.edges[k].layer]=(counts[M.edges[k].layer]||0)+1;
+  for(const k in M.faces) counts[M.faces[k].layer]=(counts[M.faces[k].layer]||0)+1;
+  pLay.innerHTML=`<h3>เลเยอร์</h3><p class="note">แตะชื่อเพื่อตั้งเป็นเลเยอร์ที่กำลังวาด</p>`+
+    M.layers.map(l=>`<div class="lrow" data-active="${M.active===l.id?1:0}" data-id="${l.id}">
+      <button class="eye" data-eye="${l.id}" aria-pressed="${l.visible}">${eye(l.visible)}</button>
+      <input class="nm" data-nm="${l.id}" value="${l.name}">
+      <span class="cnt">${counts[l.id]||0}</span>
+      ${M.layers.length>1?`<button class="del" data-del="${l.id}">×</button>`:''}
+    </div>`).join('')+
+    `<div class="grp"><button class="ibtn" id="btnAddLayer" style="width:100%;justify-content:center">+ เพิ่มเลเยอร์</button></div>`;
+  pLay.querySelectorAll('[data-eye]').forEach(b=>b.onclick=()=>{
+    const l=layerOf(b.dataset.eye); l.visible=!l.visible; refreshVisibility(); renderPanels();
+  });
+  pLay.querySelectorAll('[data-nm]').forEach(inp=>{
+    inp.onfocus=()=>{M.active=inp.dataset.nm;renderPanels();updateReadout();};
+    inp.onchange=()=>{layerOf(inp.dataset.nm).name=inp.value||'เลเยอร์';renderPanels();};
+  });
+  pLay.querySelectorAll('.lrow').forEach(r=>r.onclick=e=>{
+    if(e.target.closest('button')) return;
+    M.active=r.dataset.id; renderPanels(); updateReadout();
+  });
+  pLay.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.del;
+    if(!confirm('ลบเลเยอร์นี้พร้อมเส้นและผิวทั้งหมดในนั้น?')) return;
+    commit();
+    for(const k in M.edges) if(M.edges[k].layer===id) deleteEdge(k);
+    for(const k in M.faces) if(M.faces[k].layer===id) deleteFace(k);
+    M.layers=M.layers.filter(l=>l.id!==id);
+    if(M.active===id) M.active=M.layers[0].id;
+    rebuildAll(); renderPanels(); updateReadout();
+  });
+  const add=document.getElementById('btnAddLayer');
+  if(add) add.onclick=()=>{
+    commit();
+    const id='L'+(M.seq++);
+    M.layers.push({id,name:'เลเยอร์ '+M.layers.length,visible:true});
+    M.active=id; renderPanels(); updateReadout();
+  };
+
+  pFile.innerHTML=`<h3>ไฟล์งาน</h3><p class="note">SAVE · OPEN · EXPORT</p>
+    <div class="grp">
+      <button class="ibtn" id="fSave" style="width:100%;justify-content:center;margin-bottom:7px">บันทึกไฟล์งาน (.json)</button>
+      <button class="ibtn" id="fOpen" style="width:100%;justify-content:center;margin-bottom:7px">เปิดไฟล์งาน</button>
+      <button class="ibtn" id="fObj" style="width:100%;justify-content:center;margin-bottom:7px">ส่งออก OBJ (เข้า SketchUp / Rhino)</button>
+      <button class="ibtn" id="fPng" style="width:100%;justify-content:center;margin-bottom:7px">บันทึกภาพ PNG</button>
+      <button class="ibtn danger" id="fNew" style="width:100%;justify-content:center">เริ่มงานใหม่</button>
+    </div>`;
+  document.getElementById('fSave').onclick=saveFile;
+  document.getElementById('fOpen').onclick=()=>document.getElementById('fileIn').click();
+  document.getElementById('fObj').onclick=exportOBJ;
+  document.getElementById('fPng').onclick=exportPNG;
+  document.getElementById('fNew').onclick=()=>{ if(confirm('ล้างงานทั้งหมด (รวมภาพอ้างอิง)?')){commit();resetModel();clearRefs();rebuildAll();renderPanels();updateReadout();} };
+  renderRefsPanel();
+}
+
+/* =========================================================================
+   reference images / PDF underlays
+   ========================================================================= */
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';
+
+/* image quality budgets — every import is squeezed down to fit one of these */
+const REFQ={
+  light:{name:'ประหยัด',px:1200,bytes:600*1024},
+  balanced:{name:'สมดุล',px:2000,bytes:1400*1024},
+  fine:{name:'ละเอียด',px:3000,bytes:3500*1024},
+};
+S.refQuality='balanced';
+
+function drawScaled(src,maxPx,keepAlpha){
+  const w=src.width||src.naturalWidth, h=src.height||src.naturalHeight;
+  const s=Math.min(1,maxPx/Math.max(w,h));
+  const cv=document.createElement('canvas');
+  cv.width=Math.max(1,Math.round(w*s)); cv.height=Math.max(1,Math.round(h*s));
+  const cx=cv.getContext('2d');
+  cx.imageSmoothingQuality='high';
+  if(!keepAlpha){ cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height); }
+  cx.drawImage(src,0,0,cv.width,cv.height);
+  return cv;
+}
+/* steps down resolution, then quality, until the data URL fits the budget */
+function normalizeToDataURL(src,keepAlpha){
+  const q=REFQ[S.refQuality]||REFQ.balanced;
+  const srcW=src.width||src.naturalWidth, srcH=src.height||src.naturalHeight;
+  const sizes=[q.px,Math.round(q.px*.78),Math.round(q.px*.6),Math.round(q.px*.46),Math.round(q.px*.35)];
+  const quals=[.88,.8,.72,.64,.55];
+  let out=null,used=null,alpha=keepAlpha;
+  for(const px of sizes){
+    const cv=drawScaled(src,px,alpha);
+    if(alpha){
+      const url=cv.toDataURL('image/png');
+      if(url.length*0.75<=q.bytes){ out=url; used={px:Math.max(cv.width,cv.height),w:cv.width,h:cv.height,q:'png'}; break; }
+      // transparency is not worth blowing the budget — fall back to flattened JPEG
+      alpha=false;
+    }
+    let hit=false;
+    for(const qu of quals){
+      const cv2=alpha?cv:drawScaled(src,px,false);
+      const url=cv2.toDataURL('image/jpeg',qu);
+      if(url.length*0.75<=q.bytes){
+        out=url; used={px:Math.max(cv2.width,cv2.height),w:cv2.width,h:cv2.height,q:qu}; hit=true; break;
+      }
+      out=url; used={px:Math.max(cv2.width,cv2.height),w:cv2.width,h:cv2.height,q:qu};
+    }
+    if(hit) break;
+  }
+  const kb=Math.round(out.length*0.75/1024);
+  const shrunk=used.px<Math.max(srcW,srcH);
+  return {src:out,info:{w:used.w,h:used.h,kb,srcW,srcH,shrunk}};
+}
+let refSeq=1;
+/* src = data URL. props = optional saved settings when reopening a file */
+function addRef(src,name,props,quiet,info){
+  const img=new Image();
+  img.onload=()=>{
+    const tex=new THREE.Texture(img);
+    tex.needsUpdate=true; tex.encoding=THREE.sRGBEncoding;
+    const r=Object.assign({
+      id:'R'+(refSeq++),name,src,aspect:img.width/img.height,
+      plane:'xz',ox:0,oy:0,oz:0,w:20,rot:0,opacity:.6,visible:true
+    },props||{},{tex,mesh:null,src,name,aspect:img.width/img.height,
+      info:info||props&&props.info||{w:img.width,h:img.height,kb:Math.round(src.length*0.75/1024)}});
+    buildRefMesh(r); S.refs.push(r);
+    renderPanels();
+    if(!quiet){
+      const i=r.info;
+      toast(i.shrunk
+        ? 'นำเข้า "'+name+'" · ย่อ '+i.srcW+'×'+i.srcH+' → '+i.w+'×'+i.h+' ('+i.kb+' KB)'
+        : 'นำเข้า "'+name+'" แล้ว ('+i.kb+' KB)');
+    }
+  };
+  img.onerror=()=>toast('เปิดภาพนี้ไม่ได้');
+  img.src=src;
+}
+function buildRefMesh(r){
+  if(r.mesh){ gRefs.remove(r.mesh); r.mesh.geometry.dispose(); r.mesh.material.dispose(); }
+  const h=r.w/r.aspect;
+  const g=new THREE.PlaneGeometry(r.w,h);
+  const m=new THREE.MeshBasicMaterial({map:r.tex,transparent:true,opacity:r.opacity,
+    side:THREE.DoubleSide,depthWrite:false});
+  const mesh=new THREE.Mesh(g,m);
+  mesh.renderOrder=-1;
+  // anchor at the image's lower-left corner = the given origin
+  if(r.plane==='xz'){                       // plan on the floor
+    mesh.rotation.set(-Math.PI/2,0,0);
+    mesh.position.set(r.ox+r.w/2,r.oy+0.002,r.oz+h/2);
+    mesh.rotateZ(-r.rot*Math.PI/180);
+  }else if(r.plane==='xy'){                 // elevation facing +Z
+    mesh.rotation.set(0,0,r.rot*Math.PI/180);
+    mesh.position.set(r.ox+r.w/2,r.oy+h/2,r.oz);
+  }else{                                    // 'yz' elevation facing +X
+    mesh.rotation.set(0,Math.PI/2,r.rot*Math.PI/180);
+    mesh.position.set(r.ox,r.oy+h/2,r.oz+r.w/2);
+  }
+  mesh.visible=r.visible;
+  gRefs.add(mesh); r.mesh=mesh;
+}
+function removeRef(id){
+  const i=S.refs.findIndex(x=>x.id===id); if(i<0) return;
+  const r=S.refs[i];
+  if(r.mesh){ gRefs.remove(r.mesh); r.mesh.geometry.dispose(); r.mesh.material.dispose(); }
+  r.tex.dispose(); S.refs.splice(i,1); renderPanels();
+}
+document.getElementById('imgIn').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name);
+  try{
+    if(isPdf){
+      if(!window.pdfjsLib){ toast('อ่าน PDF ไม่ได้ — ต่ออินเทอร์เน็ตแล้วลองใหม่'); return; }
+      toast('กำลังแปลง PDF…');
+      const buf=await f.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+      const page=await pdf.getPage(1);
+      const vp=page.getViewport({scale:1});
+      const budget=(REFQ[S.refQuality]||REFQ.balanced).px;
+      const scale=Math.min(budget/vp.width,budget/vp.height,3);
+      const v2=page.getViewport({scale});
+      const cv=document.createElement('canvas');
+      cv.width=Math.floor(v2.width); cv.height=Math.floor(v2.height);
+      const cx=cv.getContext('2d');
+      cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
+      await page.render({canvasContext:cx,viewport:v2}).promise;
+      const n=normalizeToDataURL(cv,false);
+      addRef(n.src,f.name,null,false,n.info);
+    }else{
+      const isPng=/png$/i.test(f.type)||/\.png$/i.test(f.name);
+      const img=new Image();
+      img.onload=()=>{
+        const n=normalizeToDataURL(img,isPng);
+        addRef(n.src,f.name,null,false,n.info);
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror=()=>toast('เปิดภาพนี้ไม่ได้');
+      img.src=URL.createObjectURL(f);
+    }
+  }catch(err){ toast('นำเข้าไม่สำเร็จ'); }
+};
+
+function renderRefsPanel(){
+  const p=document.getElementById('panelRefs');
+  const PL={xz:'ระนาบพื้น (แปลน)',xy:'ระนาบตั้ง หน้า (รูปด้าน)',yz:'ระนาบตั้ง ข้าง (รูปด้าน)'};
+  p.innerHTML=`<h3>ภาพอ้างอิง</h3><p class="note">PLAN · ELEVATION UNDERLAY</p>
+    <div class="grp" style="margin-bottom:10px"><div class="t">คุณภาพตอนนำเข้า · ย่อให้อัตโนมัติ</div>
+      <div class="seg" id="refQ">
+        ${Object.keys(REFQ).map(k=>`<button data-q="${k}" aria-pressed="${S.refQuality===k}">${REFQ[k].name}</button>`).join('')}
+      </div>
+      <div class="hint" style="margin-top:7px;border:none;padding:0">สูงสุด ${(REFQ[S.refQuality]||REFQ.balanced).px} px · ราว ${Math.round((REFQ[S.refQuality]||REFQ.balanced).bytes/1024)} KB ต่อรูป</div>
+    </div>
+    <button class="ibtn" id="refAdd" style="width:100%;justify-content:center">+ นำเข้ารูปหรือ PDF</button>`+
+    (S.refs.length?'':`<div class="hint" style="margin-top:10px">ใช้แปลนหรือรูปด้านเป็นพื้นหลัง แล้ววาดทับได้เลย</div>`)+
+    S.refs.map(r=>`<div class="rref" data-id="${r.id}">
+      <div class="hd">
+        <button class="eye" data-reye="${r.id}" aria-pressed="${r.visible}">${eye(r.visible)}</button>
+        <b>${r.name}</b>
+        <button class="del" data-rdel="${r.id}">×</button>
+      </div>
+      <div class="seg" style="margin-bottom:7px">
+        ${['xz','xy','yz'].map(k=>`<button data-rpl="${r.id}:${k}" aria-pressed="${r.plane===k}">${
+          k==='xz'?'พื้น':k==='xy'?'ตั้ง-หน้า':'ตั้ง-ข้าง'}</button>`).join('')}
+      </div>
+      <div class="mini"><label>X</label><input class="num" data-rn="${r.id}:ox" value="${toU(r.ox).toFixed(uInfo().dec)}">
+        <label>Y</label><input class="num" data-rn="${r.id}:oy" value="${toU(r.oy).toFixed(uInfo().dec)}">
+        <label>Z</label><input class="num" data-rn="${r.id}:oz" value="${toU(r.oz).toFixed(uInfo().dec)}"></div>
+      <div class="mini"><label>กว้าง</label><input class="num" data-rn="${r.id}:w" value="${toU(r.w).toFixed(uInfo().dec)}">
+        <span class="unit">${uInfo().n}</span>
+        <label style="width:auto;margin-left:6px">หมุน</label><input class="num" data-rn="${r.id}:rot" value="${r.rot}"><span class="unit">°</span></div>
+      <div class="mini"><label>จาง</label><input type="range" data-rop="${r.id}" min="0.1" max="1" step="0.05" value="${r.opacity}"></div>
+      <div class="chips">
+        <button class="chip" data-rpick="${r.id}" aria-pressed="${S.setOriginFor===r.id}">ตั้งจุดเริ่มจากการแตะ</button>
+        <button class="chip" data-rcal="${r.id}">คาลิเบรตสเกล</button>
+      </div>
+      <div class="hint" style="margin-top:6px">${PL[r.plane]}${r.info?' · '+r.info.w+'×'+r.info.h+' px · '+r.info.kb+' KB':''}</div>
+    </div>`).join('');
+  p.querySelectorAll('#refQ button').forEach(b=>b.onclick=()=>{ S.refQuality=b.dataset.q; renderPanels(); });
+  p.querySelector('#refAdd').onclick=()=>document.getElementById('imgIn').click();
+  p.querySelectorAll('[data-reye]').forEach(b=>b.onclick=()=>{
+    const r=S.refs.find(x=>x.id===b.dataset.reye); r.visible=!r.visible; r.mesh.visible=r.visible; renderPanels();
+  });
+  p.querySelectorAll('[data-rdel]').forEach(b=>b.onclick=()=>removeRef(b.dataset.rdel));
+  p.querySelectorAll('[data-rpl]').forEach(b=>b.onclick=()=>{
+    const [id,k]=b.dataset.rpl.split(':');
+    const r=S.refs.find(x=>x.id===id); r.plane=k; buildRefMesh(r); renderPanels();
+  });
+  p.querySelectorAll('[data-rn]').forEach(inp=>inp.onchange=()=>{
+    const [id,f]=inp.dataset.rn.split(':');
+    const r=S.refs.find(x=>x.id===id);
+    const v=parseFloat(inp.value); if(!isFinite(v)) return;
+    r[f]=(f==='rot')?v:toM(v);
+    if(f==='w') r.w=Math.max(0.05,r.w);
+    buildRefMesh(r);
+  });
+  p.querySelectorAll('[data-rop]').forEach(s=>s.addEventListener('input',()=>{
+    const r=S.refs.find(x=>x.id===s.dataset.rop);
+    r.opacity=parseFloat(s.value); r.mesh.material.opacity=r.opacity;
+  }));
+  p.querySelectorAll('[data-rpick]').forEach(b=>b.onclick=()=>{
+    S.setOriginFor=(S.setOriginFor===b.dataset.rpick)?null:b.dataset.rpick;
+    renderPanels();
+    if(S.setOriginFor) toast('แตะบนพื้นที่ทำงานเพื่อวางมุมล่างซ้ายของภาพ');
+  });
+  p.querySelectorAll('[data-rcal]').forEach(b=>b.onclick=()=>startCalib(b.dataset.rcal));
+}
+/* two-tap calibration: measure a known distance on the underlay */
+let calib=null;
+function startCalib(id){
+  calib={id,p0:null};
+  document.getElementById('panelRefs').classList.remove('on');
+  toast('แตะจุดที่ 1 บนภาพ แล้วแตะจุดที่ 2 ที่รู้ระยะจริง');
+}
+function calibTap(e){
+  raycaster.setFromCamera(ndc(e),camera);
+  const p=planeHit(raycaster.ray); if(!p) return true;
+  if(!calib.p0){ calib.p0=p.clone(); toast('แตะจุดที่ 2'); return true; }
+  const measured=calib.p0.distanceTo(p);
+  const r=S.refs.find(x=>x.id===calib.id);
+  const ans=prompt('ระยะจริงระหว่างสองจุดนี้ ('+uInfo().n+')','');
+  const real=parseFloat(ans);
+  if(isFinite(real)&&real>0&&measured>1e-6){
+    r.w=r.w*(toM(real)/measured); buildRefMesh(r); toast('ปรับสเกลแล้ว');
+  }
+  calib=null; renderPanels();
+  document.getElementById('panelRefs').classList.add('on');
+  return true;
+}
+
+function updateReadout(){
+  const ne=Object.keys(M.edges).length, nf=Object.keys(M.faces).length, nn=Object.keys(M.nodes).length;
+  const px=(()=>{ // scale bar: screen px per 5 m at target
+    const a=toScreen(cam.target), b=toScreen(cam.target.clone().add(V3(5,0,0)));
+    return Math.abs(b.x-a.x);
+  })();
+  const dispName={wire:'เส้น',solid:'ทึบ',xray:'โปร่ง'}[S.display];
+  readout.innerHTML=
+    `เลเยอร์: ${layerOf(M.active).name}<br>`+
+    `จุด ${nn} · เส้น ${ne} · ผิว ${nf}<br>`+
+    `ระนาบวาด ${S.planeH.toFixed(2)} m · กริด ${S.gridStep.toFixed(2)} m<br>`+
+    `${dispName}${S.lights?'':' · ปิดแสง'}${S.materials?'':' · ปิดวัสดุ'}`+
+    `<div class="scalebar"><span>5 m</span><span class="bar" style="width:${Math.max(16,Math.min(160,px)).toFixed(0)}px"></span></div>`;
+}
+
+/* ---------- top actions ---------- */
+document.getElementById('btnUndo').onclick=undo;
+document.getElementById('btnRedo').onclick=redo;
+document.getElementById('btnDelete').onclick=()=>{
+  if(sel.kind==='edge'){commit();deleteEdge(sel.id);}
+  else if(sel.kind==='face'){commit();deleteFace(sel.id);}
+  else if(sel.kind==='node'){commit();edgesAt(sel.id).forEach(e=>deleteEdge(e.id));delete M.nodes[sel.id];}
+  else{toast('เลือกชิ้นที่จะลบก่อน');return;}
+  sel={kind:null,id:null}; rebuildAll(); updateReadout();
+};
+document.getElementById('btnFocus').onclick=()=>{
+  const ids=Object.keys(M.nodes);
+  if(!ids.length){cam.target.set(0,1.5,0);cam.radius=34;applyCamera();return;}
+  const box=new THREE.Box3();
+  ids.forEach(i=>box.expandByPoint(nodePos(i)));
+  cam.target.copy(box.getCenter(V3()));
+  cam.radius=Math.max(4,box.getSize(V3()).length()*1.5); applyCamera();
+};
+document.getElementById('btnHelp').onclick=()=>document.getElementById('scrim').classList.add('on');
+document.getElementById('btnCloseHelp').onclick=()=>{
+  document.getElementById('scrim').classList.remove('on');
+  try{localStorage.setItem('ucd3d2_seen','1');}catch(e){}
+};
+
+/* ---------- file ---------- */
+/* saving works two ways: as a local .html file an anchor download is fine,
+   but inside the claude.ai viewer the page must hand the file to the host  */
+let _dl=null,_dlReady=false;
+async function dlApi(){
+  if(_dlReady) return _dl;
+  _dlReady=true;
+  try{ _dl=(window.claude&&claude.use)?await claude.use('downloads'):null; }catch(e){ _dl=null; }
+  return _dl;
+}
+const inViewer=()=>!!_dl;
+async function download(name,data,mime){
+  const blob=data instanceof Blob?data:new Blob([data],{type:mime||'application/octet-stream'});
+  const api=await dlApi();
+  if(api){
+    try{ await api.save({filename:name,data:blob}); return true; }
+    catch(err){
+      const c=err&&err.code;
+      if(c==='declined') return false;
+      if(c==='rate_limited') toast('มีหน้าต่างบันทึกค้างอยู่ — ลองใหม่อีกครั้ง');
+      else toast('บันทึกไม่สำเร็จ'+(err&&err.message?': '+err.message:''));
+      return false;
+    }
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+  return true;
+}
+/* store-only zip, so OBJ can leave the viewer (which only accepts known extensions) */
+const CRCT=(()=>{const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}
+  return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRCT[(c^u8[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(entries){
+  const te=new TextEncoder(), body=[], central=[]; let off=0;
+  entries.forEach(e=>{
+    const nm=te.encode(e.name), crc=crc32(e.data), sz=e.data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0,true);
+    lh.setUint16(8,0,true); lh.setUint16(10,0,true); lh.setUint16(12,0,true);
+    lh.setUint32(14,crc,true); lh.setUint32(18,sz,true); lh.setUint32(22,sz,true);
+    lh.setUint16(26,nm.length,true); lh.setUint16(28,0,true);
+    body.push(new Uint8Array(lh.buffer),nm,e.data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true);
+    ch.setUint16(8,0,true); ch.setUint16(10,0,true); ch.setUint16(12,0,true); ch.setUint16(14,0,true);
+    ch.setUint32(16,crc,true); ch.setUint32(20,sz,true); ch.setUint32(24,sz,true);
+    ch.setUint16(28,nm.length,true); ch.setUint16(30,0,true); ch.setUint16(32,0,true);
+    ch.setUint16(34,0,true); ch.setUint16(36,0,true); ch.setUint32(38,0,true); ch.setUint32(42,off,true);
+    central.push(new Uint8Array(ch.buffer),nm);
+    off+=30+nm.length+sz;
+  });
+  let cs=0; central.forEach(c=>cs+=c.length);
+  const eo=new DataView(new ArrayBuffer(22));
+  eo.setUint32(0,0x06054b50,true); eo.setUint16(4,0,true); eo.setUint16(6,0,true);
+  eo.setUint16(8,entries.length,true); eo.setUint16(10,entries.length,true);
+  eo.setUint32(12,cs,true); eo.setUint32(16,off,true); eo.setUint16(20,0,true);
+  return new Blob(body.concat(central,[new Uint8Array(eo.buffer)]),{type:'application/zip'});
+}
+const stamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes());};
+function saveFile(){
+  const refs=S.refs.map(r=>({name:r.name,src:r.src,plane:r.plane,ox:r.ox,oy:r.oy,oz:r.oz,
+    w:r.w,rot:r.rot,opacity:r.opacity,visible:r.visible,info:r.info}));
+  const json=JSON.stringify({v:3,model:JSON.parse(snap()),refs,view:{
+    unit:S.unit,refQuality:S.refQuality,sunAz:S.sunAz,sunAlt:S.sunAlt,sunInt:S.sunInt,shadows:S.shadows,lights:S.lights,
+    materials:S.materials,display:S.display,gXZ:S.gXZ,gXY:S.gXY,gYZ:S.gYZ,gAxes:S.gAxes,
+    gridDots:S.gridDots,snapGrid:S.snapGrid,boxW:S.boxW,boxH:S.boxH,gridStep:S.gridStep}});
+  const mb=json.length/1048576;
+  download('ucd-sketch3d-'+stamp()+'.json',json,'application/json').then(ok=>{
+    if(ok) toast('บันทึกแล้ว'+(refs.length?' · ฝังภาพอ้างอิง '+refs.length+' รูป ('+mb.toFixed(1)+' MB)':''));
+  });
+}
+function clearRefs(){
+  S.refs.slice().forEach(r=>{
+    if(r.mesh){ gRefs.remove(r.mesh); r.mesh.geometry.dispose(); r.mesh.material.dispose(); }
+    r.tex.dispose();
+  });
+  S.refs=[];
+}
+document.getElementById('fileIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      commit();
+      restore(JSON.stringify(d.model||d));
+      if(d.view) Object.assign(S,d.view);
+      clearRefs();
+      (d.refs||[]).forEach(x=>{
+        const {src,name}=x; const props={...x}; delete props.src; delete props.name;
+        addRef(src,name,props,true);
+      });
+      buildGuides(); buildGridDots(true); syncGuideVis(); refreshAppearance(); renderPanels(); updateReadout();
+      toast('เปิดไฟล์งานแล้ว'+((d.refs||[]).length?' · พร้อมภาพอ้างอิง':''));
+    }catch(err){ toast('ไฟล์นี้เปิดไม่ได้'); }
+  };
+  r.readAsText(f); e.target.value='';
+};
+async function exportOBJ(){
+  await dlApi();
+  const objs=[...Object.values(fMesh),...Object.values(eMesh)];
+  if(!objs.length){toast('ยังไม่มีชิ้นงานให้ส่งออก');return;}
+  let out='# UCD Sketch3D\n',off=1;
+  objs.forEach((o,i)=>{
+    o.updateMatrixWorld(true);
+    const pos=o.geometry.attributes.position; if(!pos) return;
+    out+='o '+o.userData.kind+'_'+o.userData.id+'\n';
+    const v=V3();
+    for(let k=0;k<pos.count;k++){
+      v.fromBufferAttribute(pos,k).applyMatrix4(o.matrixWorld);
+      out+='v '+v.x.toFixed(4)+' '+v.y.toFixed(4)+' '+v.z.toFixed(4)+'\n';
+    }
+    if(o.geometry.index){const a=o.geometry.index.array;
+      for(let k=0;k<a.length;k+=3) out+='f '+(a[k]+off)+' '+(a[k+1]+off)+' '+(a[k+2]+off)+'\n';}
+    else for(let k=0;k<pos.count;k+=3) out+='f '+(k+off)+' '+(k+1+off)+' '+(k+2+off)+'\n';
+    off+=pos.count;
+  });
+  const base='ucd-sketch3d-'+stamp();
+  if(inViewer()){
+    const zip=zipStore([{name:base+'.obj',data:new TextEncoder().encode(out)}]);
+    if(await download(base+'.obj.zip',zip)) toast('ส่งออก OBJ แล้ว (อยู่ในไฟล์ zip)');
+  }else{
+    if(await download(base+'.obj',out,'text/plain')) toast('ส่งออก OBJ แล้ว');
+  }
+}
+function exportPNG(){
+  hideHelpers(); selBox.visible=false;
+  renderer.render(scene,camera);
+  renderer.domElement.toBlob(b=>{
+    download('ucd-sketch3d-'+stamp()+'.png',b).then(ok=>{ if(ok) toast('บันทึกภาพแล้ว'); });
+    refreshSel();
+  });
+}
+
+/* keyboard */
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  const k=e.key.toLowerCase();
+  if((e.metaKey||e.ctrlKey)&&k==='z'){e.preventDefault(); e.shiftKey?redo():undo(); return;}
+  if(k==='escape'){ chain=null; abortDraw(); renderDock(); return; }
+  if(k==='enter'&&chain){ finishChain(); return; }
+  const map={'1':'free','2':'line','3':'mass','4':'node','5':'erase','6':'select','7':'orbit'};
+  if(map[k]){S.tool=map[k];rebuildNodes();renderDock();}
+  else if(k==='f') document.getElementById('btnFocus').click();
+  else if(k==='delete'||k==='backspace') document.getElementById('btnDelete').click();
+  else if(k==='g'){S.gXZ=!S.gXZ;syncGuideVis();renderPanels();}
+});
+
+/* toast */
+let tT; function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');
+  clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),1700);}
+
+/* =========================================================================
+   loop
+   ========================================================================= */
+function tick(){
+  requestAnimationFrame(tick);
+  checkHold();
+  buildGridDots(false);
+  // flip vertical guide walls to the far side
+  if(gridG.xy) gridG.xy.position.z=(camera.position.z>0?0:S.boxW);
+  if(gridG.yz) gridG.yz.position.x=(camera.position.x>0?0:S.boxW);
+  ptsMain.material.size=(S.tool==='node'?14:10);
+  if(sel.kind) refreshSel();
+  renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight); updateReadout();
+});
+
+buildGuides(); updateLights(); rebuildAll(); renderPanels(); renderDock(); updateReadout(); tick();
+
+/* ---------- workspace setup dialog ---------- */
+(function setup(){
+  const sc=document.getElementById('setupScrim');
+  let u='m', gstep=1;
+  const uSeg=document.getElementById('setUnit'), gSeg=document.getElementById('setGrid');
+  const freeWrap=document.getElementById('setFreeWrap'), freeIn=document.getElementById('setFree'),
+        freeU=document.getElementById('setFreeU');
+  const setU=()=>{ freeU.textContent=UNITS[u].n; };
+  uSeg.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    u=b.dataset.u; uSeg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); setU();
+  });
+  gSeg.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    gSeg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+    if(b.dataset.g==='free'){ freeWrap.style.display='flex'; gstep=null; }
+    else { freeWrap.style.display='none'; gstep=parseFloat(b.dataset.g); }
+  });
+  document.getElementById('setupGo').onclick=()=>{
+    S.unit=u;
+    if(gstep===null){
+      const v=parseFloat(freeIn.value);
+      gstep=(isFinite(v)&&v>0)?clamp(v/UNITS[u].f,0.001,10):1;
+    }
+    S.gridStep=gstep;
+    const w=parseFloat(document.getElementById('setW').value), h=parseFloat(document.getElementById('setH').value);
+    if(isFinite(w)&&w>0) S.boxW=clamp(w,5,200);
+    if(isFinite(h)&&h>0) S.boxH=clamp(h,3,120);
+    if(S.gridStep<0.2) S.gridDots=true;
+    sc.classList.remove('on');
+    buildGuides(); buildGridDots(true); syncGuideVis(); renderPanels(); renderDock(); updateReadout();
+    try{ localStorage.setItem('ucd3d3_setup',JSON.stringify({u:S.unit,g:S.gridStep,w:S.boxW,h:S.boxH})); }catch(e){}
+  };
+  let prev=null;
+  try{ prev=JSON.parse(localStorage.getItem('ucd3d3_setup')||'null'); }catch(e){}
+  if(prev){
+    S.unit=prev.u; S.gridStep=prev.g; S.boxW=prev.w; S.boxH=prev.h;
+    buildGuides(); buildGridDots(true); renderPanels(); renderDock(); updateReadout();
+  }else{
+    setU(); sc.classList.add('on');
+  }
+})();
+try{ if(!localStorage.getItem('ucd3d2_seen')&&!document.getElementById('setupScrim').classList.contains('on'))
+  document.getElementById('scrim').classList.add('on'); }
+catch(e){}
+
+/* ---------- PWA: offline cache + install ---------- */
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+let deferredInstall=null;
+addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredInstall=e;
+  const b=document.createElement('button');
+  b.className='ibtn'; b.id='btnInstall'; b.textContent='ติดตั้งแอป';
+  b.onclick=async()=>{ b.remove(); deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall=null; };
+  document.querySelector('.topright').prepend(b);
+});
+addEventListener('appinstalled',()=>{ const b=document.getElementById('btnInstall'); if(b) b.remove(); });
+</script>
+</body>
+</html>
