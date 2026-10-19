@@ -3,7 +3,7 @@
    Bump CACHE whenever any precached file changes; the old cache is dropped
    on activate and every open tab picks the new version up on next load. */
 
-const CACHE = 'ucd-sketch3d-v3.1.0';
+const CACHE = 'ucd-sketch3d-v3.2.0';
 
 const SHELL = [
   '.',

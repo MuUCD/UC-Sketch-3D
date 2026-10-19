@@ -57,7 +57,8 @@ canvas{display:block;touch-action:none;position:fixed;inset:0}
 
 .dock{position:fixed;z-index:30;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 12px);
   width:min(780px,calc(100vw - 24px));background:var(--trace);border:1px solid var(--rule);border-radius:14px;
-  box-shadow:var(--shadow);padding:10px;display:flex;flex-direction:column;gap:9px}
+  box-shadow:var(--shadow);padding:10px;display:flex;flex-direction:column;gap:9px;
+  max-height:min(58vh,520px);overflow-y:auto;overscroll-behavior:contain}
 .tools{display:flex;gap:6px;flex-wrap:wrap}
 .tool{flex:1 1 auto;min-width:72px;background:var(--white);border:1px solid var(--rule);border-radius:9px;padding:9px 7px 8px;
   cursor:pointer;text-align:center;font-family:'IBM Plex Sans Thai';font-size:12.5px;font-weight:500;color:var(--graphite-2);
@@ -255,11 +256,41 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
       <dt>เส้นตรง</dt><dd>แตะวางจุดที่ 1 (ไม่ต้องค้าง) → ถ้าต้องการระยะแน่นอนให้ใส่ใน <b>ล็อกระยะ</b> → กดค้างที่จุดที่ 2 จะเห็นสีบอกทิศ ลากจนได้แนวที่ต้องการ แล้ว<b>ปล่อยมือ</b> เส้นจึงเกิด</dd>
       <dt>ล็อกระยะ</dt><dd>ว่างไว้ = เส้นไปหยุดตรงที่ปล่อยมือ · ใส่ค่า = เส้นยาวเท่าที่กำหนดตามทิศที่ลาก (จะสั้นหรือเลยจุดที่ 2 ก็ได้)</dd>
       <dt>ภาพอ้างอิง</dt><dd>นำเข้ารูปหรือ PDF เป็นแปลน/รูปด้าน วางบนระนาบพื้นหรือระนาบตั้ง ตั้งจุดเริ่มและคาลิเบรตสเกลได้</dd>
+      <dt>แดดจริง</dt><dd>เฟส 04 ตั้งพิกัดโครงการแล้วเงาจะตกตามดวงอาทิตย์จริงของวันและเวลานั้น กดเล่นดูเงาเคลื่อนทั้งวันได้ · วางลิงก์จาก Google Maps เพื่อใส่พิกัดได้เลย</dd>
+      <dt>ทิศในฉาก</dt><dd><span class="k" style="background:#C8322A"></span>N ทิศเหนือ อยู่ทางแกนลึกด้านลบ ถ้าไซต์จริงหันเฉียง ใส่องศาที่ช่อง <b>หันหน้า</b> ในกล่องที่ตั้ง</dd>
       <dt>ปิดวง = ผิว</dt><dd>เมื่อเส้นบรรจบกันครบวง ระบบสร้างเพลนให้อัตโนมัติ</dd>
       <dt>โหนด</dt><dd>ลากจุดเพื่อดัดรูปทรง เส้นและผิวที่ต่ออยู่จะขยับตาม</dd>
       <dt>กล่องไกด์</dt><dd>เปิด/ปิดกริดพื้น ผนังหน้า ผนังข้าง ได้แยกกันในเมนู <b>มุมมอง</b></dd>
     </dl>
     <button class="close" id="btnCloseHelp">เริ่มสเก็ต</button>
+  </div>
+</div>
+
+<div class="scrim" id="siteScrim">
+  <div class="card">
+    <h2>ที่ตั้งโครงการ</h2>
+    <p class="sub">ใช้คำนวณตำแหน่งดวงอาทิตย์จริงตามวันและเวลา</p>
+    <div class="grp"><div class="t">เลือกจังหวัด</div>
+      <div class="chips" id="siteCities"></div></div>
+    <div class="grp"><div class="t">หรือวางพิกัดจาก Google Maps</div>
+      <input class="num" id="sitePaste" style="width:100%;text-align:left"
+        placeholder="วางลิงก์แผนที่ หรือพิกัดแบบ 13.7563, 100.5018">
+      <p class="hint" style="border:none;padding-top:6px">
+        ใน Google Maps กดค้างที่จุดบนแผนที่ จะมีพิกัดขึ้นมาให้ก๊อป</p></div>
+    <div class="grp"><div class="t">พิกัด</div>
+      <div class="mini"><label>ละติจูด</label><input class="num" id="siteLat" style="width:110px">
+        <label style="width:auto;margin-left:8px">ลองจิจูด</label><input class="num" id="siteLon" style="width:110px"></div>
+      <div class="mini" style="margin-top:6px"><label>เขตเวลา</label>
+        <input class="num" id="siteTz" style="width:70px"><span class="unit">ชม. จาก UTC (ไทย = 7)</span></div></div>
+    <div class="grp"><div class="t">ทิศทางของแบบ</div>
+      <div class="mini"><label>หันหน้า</label><input class="num" id="siteNorth" style="width:80px"><span class="unit">°</span>
+        <span class="lab" style="min-width:0;margin-left:8px">0 = แกนลึกชี้ทิศใต้</span></div>
+      <p class="hint" style="border:none;padding-top:6px">
+        ถ้าไซต์จริงไม่ได้หันตรงทิศ ใส่องศาที่แบบหมุนไปจากทิศเหนือจริง เงาจะคำนวณตามนั้น</p></div>
+    <div class="hint" id="siteMsg" style="min-height:18px;border:none;padding-top:4px"></div>
+    <div class="row" style="gap:8px;margin-top:6px">
+      <button class="ibtn" id="siteCancel" style="flex:1;justify-content:center">ยกเลิก</button>
+      <button class="close" id="siteOK" style="flex:2;margin-top:0">ใช้พิกัดนี้</button></div>
   </div>
 </div>
 
@@ -514,6 +545,11 @@ const S={
   gXZ:true,gXY:false,gYZ:false,gAxes:true, snapGrid:true,
   boxW:40, boxH:20, gridStep:1, gridMajor:5,
   sunAz:135,sunAlt:48,sunInt:1.3,
+  /* แดดจริงตามพิกัด — ค่าเริ่มต้นที่สมุทรสาคร */
+  realSun:true, lat:13.5475, lon:100.2745, tz:7, siteNorth:0,
+  date:[new Date().getFullYear(),new Date().getMonth()+1,new Date().getDate()],
+  minutes:540, sunPath:true, compass:true, playing:false, playSpeed:60,
+  siteName:'สมุทรสาคร',
 };
 let sel={kind:null,id:null};
 
@@ -738,19 +774,179 @@ function refreshSel(){
 function select(kind,id){ sel={kind,id}; refreshSel(); rebuildNodes(); renderDock(); updateReadout(); }
 
 /* =========================================================================
+   ตำแหน่งดวงอาทิตย์จริง — NOAA Solar Position Algorithm
+
+   แกนในฉาก: −Z = ทิศเหนือ · +X = ทิศตะวันออก · +Y = ขึ้นฟ้า
+   ต้องเป็น −Z ไม่ใช่ +Z เพราะ three.js ใช้ระบบพิกัดมือขวา
+   ถ้าตั้งให้ +Z เป็นเหนือ แผนที่เมื่อมองจากด้านบนจะกลับซ้าย-ขวาทั้งใบ
+   ทุกที่ที่แปลงมุมทิศเป็นพิกัดต้องผ่าน azAltToVec() เพื่อไม่ให้หลุดกฎนี้
+   ========================================================================= */
+const D2R=Math.PI/180, R2D=180/Math.PI;
+const dsin=d=>Math.sin(d*D2R), dcos=d=>Math.cos(d*D2R), dtan=d=>Math.tan(d*D2R);
+const mod360=x=>((x%360)+360)%360;
+
+function julianDay(y,m,d){
+  if(m<=2){ y-=1; m+=12; }
+  const A=Math.floor(y/100), B=2-A+Math.floor(A/4);
+  return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5;
+}
+/* ค่าที่ขึ้นกับวัน ไม่ขึ้นกับเวลาหรือตำแหน่งบนโลก */
+function solarDay(y,mo,d){
+  const T=(julianDay(y,mo,d)-2451545)/36525;
+  const L0=mod360(280.46646+T*(36000.76983+T*0.0003032));
+  const M=357.52911+T*(35999.05029-0.0001537*T);
+  const e=0.016708634-T*(0.000042037+0.0000001267*T);
+  const C=dsin(M)*(1.914602-T*(0.004817+0.000014*T))
+         +dsin(2*M)*(0.019993-0.000101*T)+dsin(3*M)*0.000289;
+  const omega=125.04-1934.136*T;
+  const lambda=L0+C-0.00569-0.00478*dsin(omega);
+  const e0=23+(26+(21.448-T*(46.815+T*(0.00059-T*0.001813)))/60)/60;
+  const eps=e0+0.00256*dcos(omega);
+  const decl=Math.asin(dsin(eps)*dsin(lambda))*R2D;
+  const yy=dtan(eps/2)*dtan(eps/2);
+  const EoT=4*R2D*(yy*dsin(2*L0)-2*e*dsin(M)+4*e*yy*dsin(M)*dcos(2*L0)
+            -0.5*yy*yy*dsin(4*L0)-1.25*e*e*dsin(2*M));
+  return {decl,EoT};
+}
+/* minutes = นาทีจากเที่ยงคืนตามเวลาท้องถิ่น · คืนมุมทิศจากเหนือตามเข็มนาฬิกา และมุมสูง */
+function sunPosition(lat,lon,y,mo,d,minutes,tz){
+  const {decl,EoT}=solarDay(y,mo,d);
+  let tst=(minutes+EoT+4*lon-60*tz)%1440; if(tst<0) tst+=1440;
+  const ha=tst/4<0?tst/4+180:tst/4-180;
+  const cz=dsin(lat)*dsin(decl)+dcos(lat)*dcos(decl)*dcos(ha);
+  const zen=Math.acos(Math.max(-1,Math.min(1,cz)))*R2D, alt=90-zen;
+  let az, den=dcos(lat)*dsin(zen);
+  if(Math.abs(den)<1e-9){ az=ha>0?180:0; }
+  else{
+    let c=Math.max(-1,Math.min(1,(dsin(lat)*dcos(zen)-dsin(decl))/den));
+    const a=Math.acos(c)*R2D;
+    az=ha>0?mod360(a+180):mod360(540-a);
+  }
+  return {az,alt};
+}
+/* เวลาขึ้น เที่ยงจริง ตก (นาที) — เซนิธ 90.833° เผื่อการหักเหของบรรยากาศ */
+function sunTimes(lat,lon,y,mo,d,tz){
+  const {decl,EoT}=solarDay(y,mo,d);
+  const noon=720-4*lon-EoT+tz*60;
+  const cosHA=dcos(90.833)/(dcos(lat)*dcos(decl))-dtan(lat)*dtan(decl);
+  if(cosHA>1)  return {noon,sunrise:null,sunset:null,note:'ไม่มีแดดทั้งวัน'};
+  if(cosHA<-1) return {noon,sunrise:null,sunset:null,note:'แดดตลอดวัน'};
+  const ha=Math.acos(cosHA)*R2D;
+  return {noon,sunrise:noon-ha*4,sunset:noon+ha*4,note:null};
+}
+const hhmm=m=>{ if(m==null) return '—';
+  let x=Math.round(m); x=((x%1440)+1440)%1440;
+  return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0'); };
+
+/* แปลงมุมทิศจริง → มุมในพิกัดโมเดล (เผื่อไซต์ไม่ได้หันตรงทิศเหนือ) */
+const toModelAz=az=>az-S.siteNorth;
+
+/* จุดเดียวในโปรแกรมที่แปลงมุมทิศ+มุมสูง เป็นพิกัดในฉาก — เหนือ = −Z, ตะวันออก = +X */
+function azAltToVec(azDeg,altDeg,r){
+  const a=azDeg*D2R, e=altDeg*D2R, h=r*Math.cos(e);
+  return V3(h*Math.sin(a), r*Math.sin(e), -h*Math.cos(a));
+}
+
+/* ---------- เส้นทางเดินดวงอาทิตย์ + เข็มทิศ ---------- */
+const gSun=new THREE.Group(); scene.add(gSun);
+function arcLine(color,opacity,width){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(3*200),3));
+  const l=new THREE.Line(g,new THREE.LineBasicMaterial({color,transparent:true,opacity}));
+  l.frustumCulled=false; gSun.add(l); return l;
+}
+const pathToday=arcLine(0xE8A33D,0.95), pathJun=arcLine(0xC8322A,0.32), pathDec=arcLine(0x2255CC,0.32);
+const sunBall=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),
+  new THREE.MeshBasicMaterial({color:0xF5C04A}));
+sunBall.visible=false; gSun.add(sunBall);
+const sunRay=new THREE.Line(new THREE.BufferGeometry().setAttribute('position',
+  new THREE.Float32BufferAttribute([0,0,0,0,0,0],3)),
+  new THREE.LineBasicMaterial({color:0xE8A33D,transparent:true,opacity:.35}));
+sunRay.frustumCulled=false; gSun.add(sunRay);
+
+function setArc(line,y,mo,d){
+  const R=Math.max(S.boxW,20)*0.85, arr=line.geometry.attributes.position.array;
+  const t=sunTimes(S.lat,S.lon,y,mo,d,S.tz);
+  let n=0;
+  if(t.sunrise!=null){
+    for(let i=0;i<=120;i++){
+      const m=t.sunrise+(t.sunset-t.sunrise)*(i/120);
+      const p=sunPosition(S.lat,S.lon,y,mo,d,m,S.tz);
+      if(p.alt<-1) continue;
+      const v=azAltToVec(toModelAz(p.az),p.alt,R);
+      arr[n*3]=v.x; arr[n*3+1]=v.y; arr[n*3+2]=v.z;
+      n++;
+    }
+  }
+  line.geometry.attributes.position.needsUpdate=true;
+  line.geometry.setDrawRange(0,n);
+  line.visible=n>1;
+}
+function rebuildSunPath(){
+  if(!S.realSun||!S.sunPath){ gSun.visible=false; return; }
+  gSun.visible=true;
+  const y=S.date[0];
+  setArc(pathToday,y,S.date[1],S.date[2]);
+  setArc(pathJun,y,6,21);
+  setArc(pathDec,y,12,21);
+}
+
+/* เข็มทิศบนพื้น */
+const compass=new THREE.Group(); scene.add(compass);
+function labelSprite(txt,color){
+  const c=document.createElement('canvas'); c.width=c.height=128;
+  const x=c.getContext('2d');
+  x.fillStyle='#'+color.toString(16).padStart(6,'0');
+  x.font='bold 78px IBM Plex Sans Thai, sans-serif';
+  x.textAlign='center'; x.textBaseline='middle'; x.fillText(txt,64,68);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),
+    transparent:true,depthTest:false}));
+  s.renderOrder=20; return s;
+}
+const compassMarks=[['N',0,0xC8322A],['E',90,0x8A8780],['S',180,0x8A8780],['W',270,0x8A8780]]
+  .map(([t,a,c])=>{ const s=labelSprite(t,c); s.userData.bearing=a; compass.add(s); return s; });
+function updateCompass(){
+  compass.visible=S.realSun&&S.compass;
+  if(!compass.visible) return;
+  const R=Math.max(S.boxW,20)*0.52, sc=Math.max(1.2,cam.radius*0.045);
+  compassMarks.forEach(s=>{
+    const v=azAltToVec(toModelAz(s.userData.bearing),0,R);
+    s.position.set(v.x,0.3,v.z);
+    s.scale.setScalar(sc);
+  });
+}
+
+/* =========================================================================
    lights
    ========================================================================= */
+function currentSun(){
+  if(!S.realSun) return {az:S.sunAz,alt:S.sunAlt};
+  const p=sunPosition(S.lat,S.lon,S.date[0],S.date[1],S.date[2],S.minutes,S.tz);
+  return {az:toModelAz(p.az),alt:p.alt,real:p};
+}
 function updateLights(){
   if(S.lights){
-    const az=S.sunAz*Math.PI/180, alt=S.sunAlt*Math.PI/180, r=90;
-    sun.position.set(r*Math.cos(alt)*Math.sin(az),Math.max(2,r*Math.sin(alt)),r*Math.cos(alt)*Math.cos(az));
+    const cs=currentSun();
+    const sp=azAltToVec(cs.az,Math.max(cs.alt,0),90);
+    sun.position.set(sp.x,Math.max(2,sp.y),sp.z);
     sun.target.position.set(0,0,0);
-    sun.intensity=S.sunInt; sun.castShadow=S.shadows;
-    const warm=1-Math.min(1,S.sunAlt/60);
+    const below=cs.alt<=0;                                  // ดวงอาทิตย์ลับขอบฟ้า
+    sun.intensity=below?0:S.sunInt*Math.min(1,0.25+cs.alt/25);
+    sun.castShadow=S.shadows&&!below;
+    const warm=1-Math.min(1,Math.max(cs.alt,0)/60);
     sun.color.setRGB(1,1-warm*.14,1-warm*.30);
-    hemi.intensity=.5; amb.intensity=.26+(S.shadows?0:.2);
+    hemi.intensity=below?.42:.5;
+    amb.intensity=(below?.5:.26)+(S.shadows?0:.2);
+    if(S.realSun&&S.sunPath&&!below){
+      const p=azAltToVec(cs.az,cs.alt,Math.max(S.boxW,20)*0.85);
+      sunBall.position.copy(p); sunBall.scale.setScalar(Math.max(.5,S.boxW*0.022)); sunBall.visible=true;
+      const ra=sunRay.geometry.attributes.position.array;
+      ra[0]=p.x; ra[1]=p.y; ra[2]=p.z; ra[3]=0; ra[4]=0; ra[5]=0;
+      sunRay.geometry.attributes.position.needsUpdate=true; sunRay.visible=true;
+    }else{ sunBall.visible=false; sunRay.visible=false; }
   }else{
     sun.intensity=0; sun.castShadow=false; hemi.intensity=.85; amb.intensity=.95;
+    sunBall.visible=false; sunRay.visible=false;
   }
   ground.visible=S.shadows&&S.lights;
 }
@@ -1447,10 +1643,46 @@ function renderDock(){
   if(S.phase===3){
     h+=`<div class="tools">${tBtn('orbit','หมุนมุม',ICON.orbit)}${tBtn('select','เลือกชิ้น',ICON.cursor)}
       <button class="tool" id="btnShadow" aria-pressed="${S.shadows}">${ICON.sun}<span>${S.shadows?'เงาเปิด':'เงาปิด'}</span></button></div>`;
-    h+=sl('sAz','ทิศแดด',0,360,1,S.sunAz,S.sunAz+'°');
-    h+=sl('sAlt','มุมสูง',3,89,1,S.sunAlt,S.sunAlt+'°');
+    h+=`<div class="seg" style="margin-bottom:2px">
+      <button data-sunmode="real" aria-pressed="${S.realSun}">แดดจริงตามพิกัด</button>
+      <button data-sunmode="manual" aria-pressed="${!S.realSun}">ตั้งมุมเอง</button></div>`;
+
+    if(S.realSun){
+      const t=sunTimes(S.lat,S.lon,S.date[0],S.date[1],S.date[2],S.tz);
+      const cs=currentSun();
+      const [yy,mm,dd]=S.date;
+      const iso=`${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+      h+=`<div class="chips" style="margin-top:6px">
+        <button class="chip" id="btnSite">📍 ${S.siteName||'ตั้งพิกัด'}</button>
+        <input type="date" id="sDate" value="${iso}" style="flex:1;min-width:130px;font-family:'IBM Plex Mono';
+          font-size:12.5px;background:#fff;border:1px solid var(--rule);border-radius:8px;padding:7px">
+        <button class="chip" id="btnToday">วันนี้</button>
+      </div>`;
+      h+=`<div class="chips">`+[['21 มี.ค.',3,21],['21 มิ.ย.',6,21],['23 ก.ย.',9,23],['21 ธ.ค.',12,21]]
+        .map(([n,m,d])=>`<button class="chip" data-sd="${m}:${d}" aria-pressed="${S.date[1]===m&&S.date[2]===d}">${n}</button>`).join('')+
+        `<button class="chip" id="btnPath" aria-pressed="${S.sunPath}">เส้นทางแดด</button></div>`;
+      h+=sl('sMin','เวลา',0,1439,5,S.minutes,hhmm(S.minutes));
+      h+=`<div class="chips">
+        <button class="chip" id="btnPlay" aria-pressed="${S.playing}">${S.playing?'■ หยุด':'▶ เล่นเงาทั้งวัน'}</button>
+        <button class="chip" id="btnNoon">เที่ยงจริง</button>
+        <button class="chip" id="btnNow">ตอนนี้</button>
+        <span class="lab" style="min-width:0">หันหน้า ${S.siteNorth}° — ปรับได้ที่ 📍</span>
+      </div>`;
+      const sunUp=cs.alt>0;
+      const northSun=cs.real&&cs.real.alt>0&&S.lat<23.44&&S.lat>-23.44&&(cs.real.az<90||cs.real.az>270);
+      h+=`<div class="hint">
+        ขึ้น <b>${hhmm(t.sunrise)}</b> · เที่ยงจริง <b>${hhmm(t.noon)}</b> · ตก <b>${hhmm(t.sunset)}</b> ·
+        ${sunUp
+          ? `ขณะนี้ <b>${cs.real.az.toFixed(0)}°</b> ${dirName(cs.real.az)} สูง <b>${cs.real.alt.toFixed(0)}°</b>`
+          : `<b>ลับขอบฟ้าแล้ว</b>`}
+        ${northSun?'<br><span style="color:var(--red)">แดดเข้าด้านเหนือ</span> — เกิดจริงในเขตร้อนช่วงกลางปี':''}
+      </div>`;
+    }else{
+      h+=sl('sAz','ทิศแดด',0,360,1,S.sunAz,S.sunAz+'°');
+      h+=sl('sAlt','มุมสูง',3,89,1,S.sunAlt,S.sunAlt+'°');
+    }
     h+=sl('sInt','ความแรง',.2,3,.05,S.sunInt,S.sunInt.toFixed(2));
-    h+=`<div class="hint">${S.lights?'มุมสูงต่ำ ๆ ให้เงายาวและแสงอุ่นแบบเช้า-เย็น':'ตอนนี้ปิดแสงอยู่ (โหมดแบน) — เปิดได้ในเมนูมุมมอง'}</div>`;
+    if(!S.lights) h+=`<div class="hint">ตอนนี้ปิดแสงอยู่ (โหมดแบน) — เปิดได้ในเมนูมุมมอง</div>`;
   }
   dock.innerHTML=h; bindDock();
 }
@@ -1501,6 +1733,126 @@ function bindDock(){
   if(g('btnSnapGrid')) g('btnSnapGrid').onclick=()=>{S.snapGrid=!S.snapGrid;renderDock();};
   if(g('btnExtrude')) g('btnExtrude').onclick=()=>extrudeSelected(S.extrude);
   if(g('btnShadow')) g('btnShadow').onclick=()=>{S.shadows=!S.shadows;updateLights();syncGuideVis();renderDock();};
+
+  /* ---- แดดจริง ---- */
+  dock.querySelectorAll('[data-sunmode]').forEach(b=>b.onclick=()=>{
+    S.realSun=b.dataset.sunmode==='real'; S.playing=false;
+    rebuildSunPath(); updateCompass(); updateLights(); renderDock(); updateReadout();
+  });
+  dock.querySelectorAll('[data-sd]').forEach(b=>b.onclick=()=>{
+    const [m,d]=b.dataset.sd.split(':').map(Number);
+    S.date=[S.date[0],m,d]; afterSunChange();
+  });
+  const sd=g('sDate');
+  if(sd) sd.onchange=()=>{
+    const p=sd.value.split('-').map(Number);
+    if(p.length===3&&p.every(isFinite)){ S.date=p; afterSunChange(); }
+  };
+  if(g('btnToday')) g('btnToday').onclick=()=>{
+    const n=new Date(); S.date=[n.getFullYear(),n.getMonth()+1,n.getDate()]; afterSunChange();
+  };
+  if(g('btnNow')) g('btnNow').onclick=()=>{
+    const n=new Date();
+    S.date=[n.getFullYear(),n.getMonth()+1,n.getDate()];
+    S.minutes=n.getHours()*60+n.getMinutes(); S.playing=false; afterSunChange();
+  };
+  if(g('btnNoon')) g('btnNoon').onclick=()=>{
+    const t=sunTimes(S.lat,S.lon,S.date[0],S.date[1],S.date[2],S.tz);
+    S.minutes=Math.round(t.noon); S.playing=false; afterSunChange();
+  };
+  if(g('btnPlay')) g('btnPlay').onclick=()=>{
+    S.playing=!S.playing;
+    if(S.playing){
+      const t=sunTimes(S.lat,S.lon,S.date[0],S.date[1],S.date[2],S.tz);
+      if(t.sunrise!=null&&(S.minutes<t.sunrise||S.minutes>t.sunset)) S.minutes=Math.round(t.sunrise);
+    }
+    renderDock();
+  };
+  if(g('btnPath')) g('btnPath').onclick=()=>{ S.sunPath=!S.sunPath; rebuildSunPath(); updateLights(); renderDock(); };
+  if(g('btnSite')) g('btnSite').onclick=openSiteDialog;
+  bs('sMin',v=>{ S.minutes=v; S.playing=false; g('sMin_v').textContent=hhmm(v); updateLights(); updateReadout(); });
+}
+
+/* ---------- ที่ตั้งโครงการ ---------- */
+const TH_CITIES=[
+  {n:'สมุทรสาคร',lat:13.5475,lon:100.2745},{n:'กรุงเทพฯ',lat:13.7563,lon:100.5018},
+  {n:'เชียงใหม่',lat:18.7883,lon:98.9853},{n:'ขอนแก่น',lat:16.4322,lon:102.8236},
+  {n:'ภูเก็ต',lat:7.8804,lon:98.3923},{n:'หาดใหญ่',lat:7.0086,lon:100.4747},
+  {n:'ชลบุรี',lat:13.3611,lon:100.9847},{n:'อุดรธานี',lat:17.4139,lon:102.7870},
+];
+const dirName=az=>['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้',
+  'ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ'][Math.round(mod360(az)/45)%8];
+
+/* ดึงพิกัดจากลิงก์หรือข้อความที่วางมา — รองรับ @lat,lng / !3dlat!4dlng / "lat, lng" */
+function parseLatLon(s){
+  s=String(s||'').trim(); if(!s) return null;
+  const num='(-?\\d{1,3}(?:\\.\\d+)?)';
+  const pats=[new RegExp('@'+num+','+num), new RegExp('!3d'+num+'!4d'+num),
+              new RegExp('[?&]q='+num+'%2C'+num,'i'), new RegExp('[?&]query='+num+'%2C'+num,'i'),
+              new RegExp('^'+num+'\\s*[,\\s]\\s*'+num+'$')];
+  for(const p of pats){
+    const m=s.match(p);
+    if(m){ const la=parseFloat(m[1]), lo=parseFloat(m[2]);
+      if(isFinite(la)&&isFinite(lo)&&Math.abs(la)<=90&&Math.abs(lo)<=180) return {lat:la,lon:lo}; }
+  }
+  return null;
+}
+function afterSunChange(){
+  rebuildSunPath(); updateCompass(); updateLights(); renderDock(); updateReadout();
+}
+function openSiteDialog(){
+  const sc=document.getElementById('siteScrim');
+  document.getElementById('siteLat').value=S.lat.toFixed(5);
+  document.getElementById('siteLon').value=S.lon.toFixed(5);
+  document.getElementById('siteTz').value=S.tz;
+  document.getElementById('siteNorth').value=S.siteNorth;
+  document.getElementById('sitePaste').value='';
+  document.getElementById('siteMsg').textContent='';
+  sc.classList.add('on');
+}
+function wireSiteDialog(){
+  const sc=document.getElementById('siteScrim');
+  const chips=document.getElementById('siteCities');
+  chips.innerHTML=TH_CITIES.map(c=>`<button class="chip" data-city="${c.n}">${c.n}</button>`).join('');
+  chips.querySelectorAll('[data-city]').forEach(b=>b.onclick=()=>{
+    const c=TH_CITIES.find(x=>x.n===b.dataset.city);
+    document.getElementById('siteLat').value=c.lat.toFixed(5);
+    document.getElementById('siteLon').value=c.lon.toFixed(5);
+    document.getElementById('siteTz').value=7;
+    document.getElementById('siteMsg').textContent='ใส่พิกัด '+c.n+' แล้ว';
+    sc.dataset.name=c.n;
+  });
+  document.getElementById('sitePaste').addEventListener('input',e=>{
+    const r=parseLatLon(e.target.value);
+    const msg=document.getElementById('siteMsg');
+    if(r){
+      document.getElementById('siteLat').value=r.lat.toFixed(5);
+      document.getElementById('siteLon').value=r.lon.toFixed(5);
+      msg.textContent='อ่านพิกัดได้: '+r.lat.toFixed(5)+', '+r.lon.toFixed(5);
+      sc.dataset.name='';
+    } else if(e.target.value.trim()){
+      msg.textContent='ยังอ่านพิกัดจากข้อความนี้ไม่ได้ — ลองกดค้างบนหมุดใน Google Maps แล้วก๊อปพิกัดมาวาง';
+    } else msg.textContent='';
+  });
+  document.getElementById('siteCancel').onclick=()=>sc.classList.remove('on');
+  document.getElementById('siteOK').onclick=()=>{
+    const la=parseFloat(document.getElementById('siteLat').value);
+    const lo=parseFloat(document.getElementById('siteLon').value);
+    const tz=parseFloat(document.getElementById('siteTz').value);
+    if(!isFinite(la)||Math.abs(la)>90||!isFinite(lo)||Math.abs(lo)>180){
+      document.getElementById('siteMsg').textContent='พิกัดไม่ถูกต้อง — ละติจูด -90 ถึง 90 ลองจิจูด -180 ถึง 180';
+      return;
+    }
+    const nr=parseFloat(document.getElementById('siteNorth').value);
+    S.lat=la; S.lon=lo; S.tz=isFinite(tz)?tz:7;
+    S.siteNorth=isFinite(nr)?mod360(nr):0;
+    const near=TH_CITIES.find(c=>Math.abs(c.lat-la)<0.05&&Math.abs(c.lon-lo)<0.05);
+    S.siteName=sc.dataset.name||(near?near.n:la.toFixed(3)+', '+lo.toFixed(3));
+    sc.dataset.name='';
+    sc.classList.remove('on');
+    S.realSun=true; afterSunChange();
+    toast('ตั้งที่ตั้งเป็น '+S.siteName+' แล้ว');
+  };
 }
 
 /* phases */
@@ -1983,6 +2335,8 @@ function saveFile(){
     w:r.w,rot:r.rot,opacity:r.opacity,visible:r.visible,info:r.info}));
   const json=JSON.stringify({v:3,model:JSON.parse(snap()),refs,view:{
     unit:S.unit,refQuality:S.refQuality,sunAz:S.sunAz,sunAlt:S.sunAlt,sunInt:S.sunInt,shadows:S.shadows,lights:S.lights,
+    realSun:S.realSun,lat:S.lat,lon:S.lon,tz:S.tz,siteNorth:S.siteNorth,siteName:S.siteName,
+    date:S.date,minutes:S.minutes,sunPath:S.sunPath,compass:S.compass,
     materials:S.materials,display:S.display,gXZ:S.gXZ,gXY:S.gXY,gYZ:S.gYZ,gAxes:S.gAxes,
     gridDots:S.gridDots,snapGrid:S.snapGrid,boxW:S.boxW,boxH:S.boxH,gridStep:S.gridStep}});
   const mb=json.length/1048576;
@@ -2005,7 +2359,7 @@ document.getElementById('fileIn').onchange=e=>{
       const d=JSON.parse(r.result);
       commit();
       restore(JSON.stringify(d.model||d));
-      if(d.view) Object.assign(S,d.view);
+      if(d.view){ Object.assign(S,d.view); S.playing=false; rebuildSunPath(); updateCompass(); }
       clearRefs();
       (d.refs||[]).forEach(x=>{
         const {src,name}=x; const props={...x}; delete props.src; delete props.name;
@@ -2074,10 +2428,24 @@ let tT; function toast(m){const t=document.getElementById('toast');t.textContent
 /* =========================================================================
    loop
    ========================================================================= */
+let lastT=performance.now();
 function tick(){
   requestAnimationFrame(tick);
+  const now=performance.now(), dt=Math.min(0.1,(now-lastT)/1000); lastT=now;
   checkHold();
   buildGridDots(false);
+  updateCompass();
+  if(S.playing&&S.realSun){                       // เล่นเงาเคลื่อนตลอดวัน
+    const t=sunTimes(S.lat,S.lon,S.date[0],S.date[1],S.date[2],S.tz);
+    if(t.sunrise==null){ S.playing=false; renderDock(); }
+    else{
+      S.minutes+=S.playSpeed*dt;
+      if(S.minutes>t.sunset){ S.minutes=t.sunrise; }
+      updateLights();
+      const sm=document.getElementById('sMin');
+      if(sm){ sm.value=Math.round(S.minutes); const v=document.getElementById('sMin_v'); if(v) v.textContent=hhmm(S.minutes); }
+    }
+  }
   // flip vertical guide walls to the far side
   if(gridG.xy) gridG.xy.position.z=(camera.position.z>0?0:S.boxW);
   if(gridG.yz) gridG.yz.position.x=(camera.position.x>0?0:S.boxW);
@@ -2090,7 +2458,9 @@ addEventListener('resize',()=>{
   renderer.setSize(innerWidth,innerHeight); updateReadout();
 });
 
-buildGuides(); updateLights(); rebuildAll(); renderPanels(); renderDock(); updateReadout(); tick();
+wireSiteDialog();
+buildGuides(); rebuildSunPath(); updateCompass(); updateLights();
+rebuildAll(); renderPanels(); renderDock(); updateReadout(); tick();
 
 /* ---------- workspace setup dialog ---------- */
 (function setup(){
